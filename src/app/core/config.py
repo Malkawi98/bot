@@ -1,11 +1,12 @@
 import os
 from enum import Enum
+from pathlib import Path
 
 from pydantic_settings import BaseSettings
 from starlette.config import Config
 
 current_file_dir = os.path.dirname(os.path.realpath(__file__))
-env_path = os.path.join(current_file_dir, "..", "..", ".env")
+env_path = str(Path(__file__).resolve().parents[3] / ".env")
 config = Config(env_path)
 
 
@@ -48,15 +49,22 @@ class MySQLSettings(DatabaseSettings):
 
 
 class PostgresSettings(DatabaseSettings):
-    POSTGRES_USER: str = config("POSTGRES_USER", default="postgres")
-    POSTGRES_PASSWORD: str = config("POSTGRES_PASSWORD", default="postgres")
+    POSTGRES_USER: str = config("POSTGRES_USER", default="user")
+    POSTGRES_PASSWORD: str = config("POSTGRES_PASSWORD", default="pass")
     POSTGRES_SERVER: str = config("POSTGRES_SERVER", default="localhost")
     POSTGRES_PORT: int = config("POSTGRES_PORT", default=5432)
-    POSTGRES_DB: str = config("POSTGRES_DB", default="postgres")
+    POSTGRES_DB: str = config("POSTGRES_DB", default="db")
     POSTGRES_SYNC_PREFIX: str = config("POSTGRES_SYNC_PREFIX", default="postgresql://")
     POSTGRES_ASYNC_PREFIX: str = config("POSTGRES_ASYNC_PREFIX", default="postgresql+asyncpg://")
-    POSTGRES_URI: str = f"{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_SERVER}:{POSTGRES_PORT}/{POSTGRES_DB}"
     POSTGRES_URL: str | None = config("POSTGRES_URL", default=None)
+
+    @property
+    def sqlalchemy_async_url(self):
+        return f"{self.POSTGRES_ASYNC_PREFIX}{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+
+    @property
+    def sqlalchemy_sync_url(self):
+        return f"{self.POSTGRES_SYNC_PREFIX}{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
 
 class FirstUserSettings(BaseSettings):
@@ -70,25 +78,8 @@ class TestSettings(BaseSettings):
     ...
 
 
-class RedisCacheSettings(BaseSettings):
-    REDIS_CACHE_HOST: str = config("REDIS_CACHE_HOST", default="localhost")
-    REDIS_CACHE_PORT: int = config("REDIS_CACHE_PORT", default=6379)
-    REDIS_CACHE_URL: str = f"redis://{REDIS_CACHE_HOST}:{REDIS_CACHE_PORT}"
-
-
 class ClientSideCacheSettings(BaseSettings):
     CLIENT_CACHE_MAX_AGE: int = config("CLIENT_CACHE_MAX_AGE", default=60)
-
-
-class RedisQueueSettings(BaseSettings):
-    REDIS_QUEUE_HOST: str = config("REDIS_QUEUE_HOST", default="localhost")
-    REDIS_QUEUE_PORT: int = config("REDIS_QUEUE_PORT", default=6379)
-
-
-class RedisRateLimiterSettings(BaseSettings):
-    REDIS_RATE_LIMIT_HOST: str = config("REDIS_RATE_LIMIT_HOST", default="localhost")
-    REDIS_RATE_LIMIT_PORT: int = config("REDIS_RATE_LIMIT_PORT", default=6379)
-    REDIS_RATE_LIMIT_URL: str = f"redis://{REDIS_RATE_LIMIT_HOST}:{REDIS_RATE_LIMIT_PORT}"
 
 
 class DefaultRateLimitSettings(BaseSettings):
@@ -112,10 +103,7 @@ class Settings(
     CryptSettings,
     FirstUserSettings,
     TestSettings,
-    RedisCacheSettings,
     ClientSideCacheSettings,
-    RedisQueueSettings,
-    RedisRateLimiterSettings,
     DefaultRateLimitSettings,
     EnvironmentSettings,
 ):

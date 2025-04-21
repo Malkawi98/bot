@@ -64,7 +64,6 @@ repos:
     - id: unit_test
       name: Unit test
       language: system
-      entry: poetry run pytest
       pass_filenames: false
       always_run: true
       types: [python]

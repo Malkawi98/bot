@@ -1,17 +1,15 @@
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, MappedAsDataclass, sessionmaker
 
-from ..config import settings
+from app.core.config import settings
 
 
 class Base(DeclarativeBase, MappedAsDataclass):
     pass
 
 
-DATABASE_URI = settings.POSTGRES_URI
-DATABASE_PREFIX = settings.POSTGRES_ASYNC_PREFIX
-DATABASE_URL = f"{DATABASE_PREFIX}{DATABASE_URI}"
+DATABASE_URL = settings.sqlalchemy_async_url
 
 async_engine = create_async_engine(DATABASE_URL, echo=False, future=True)
 
