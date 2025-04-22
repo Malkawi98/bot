@@ -3,7 +3,8 @@ from fastapi.responses import HTMLResponse
 from app.services.rag import RAGService
 from fastapi.templating import Jinja2Templates
 
-templates = Jinja2Templates(directory="src/app/templates")
+# Change template directory for Docker compatibility
+templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(tags=["rag-ui"])
 rag_service = RAGService()
 

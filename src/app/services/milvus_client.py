@@ -1,5 +1,6 @@
 from pymilvus import connections, Collection, FieldSchema, CollectionSchema, DataType
 from pymilvus import utility
+import os
 
 from app.core.config import settings
 
@@ -12,35 +13,24 @@ EMBEDDING_DIM = 384  # Adjust to your embedding model's output size
 
 def connect_to_milvus(alias: str = "default"):
     """
-    Connect to Milvus with consistent connection settings.
-
-    Args:
-        alias: Connection alias name (default: "default")
-
-    Returns:
-        None
+    Connect to Milvus using host/port from environment or settings.
     """
     from pymilvus import connections
 
-    # Determine whether to use secure connection based on URI
-    secure = False if settings.MILVUS_URI.startswith("http://") else True
-
-    # Set up connection parameters
-    connection_args = {
-        "uri": settings.MILVUS_URI,
-        "token": settings.MILVUS_API_KEY,
-        "secure": secure,
-    }
-    # Connect to Milvus
+    # Prefer MILVUS_HOST and MILVUS_PORT env vars, fallback to settings.MILVUS_URI
+    host = os.getenv("MILVUS_HOST") or getattr(settings, "MILVUS_HOST", None) or MILVUS_HOST
+    port = os.getenv("MILVUS_PORT") or getattr(settings, "MILVUS_PORT", None) or MILVUS_PORT
+    api_key = os.getenv("MILVUS_API_KEY") or getattr(settings, "MILVUS_API_KEY", "")
+    # If URI is set in settings and not overridden by env, use it
+    uri = os.getenv("MILVUS_URI") or getattr(settings, "MILVUS_URI", None)
+    if uri:
+        connection_args = {"uri": uri, "token": api_key, "secure": not uri.startswith("http://")}
+    else:
+        connection_args = {"host": host, "port": port, "token": api_key}
     try:
         connections.connect(alias=alias, **connection_args)
     except Exception as e:
         raise
-
-
-
-# def connect_to_milvus():
-#     connections.connect("default", host=MILVUS_HOST, port=MILVUS_PORT)
 
 
 def create_collection(collection_name: str = COLLECTION_NAME, dim: int = EMBEDDING_DIM):
@@ -70,13 +60,6 @@ def insert_embedding(embedding: list[float], text: str, collection_name: str = C
     col.insert([
         {"embedding": embedding, "text": text}
     ])
-    # For batch insert in the future:
-    # col.insert([
-    #     {"embedding": embedding1, "text": text1},
-    #     {"embedding": embedding2, "text": text2},
-    #     ...
-    # ])
-
 
 def search_embedding(embedding: list[float], top_k: int = 5, collection_name: str = COLLECTION_NAME):
     col = Collection(collection_name)

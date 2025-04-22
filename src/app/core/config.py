@@ -103,7 +103,7 @@ class Settings(AppSettings, PostgresSettings, CryptSettings, FirstUserSettings, 
     ClientSideCacheSettings, DefaultRateLimitSettings, EnvironmentSettings, ):
     pass
 
-    MILVUS_URI: str = os.getenv("MILVUS_URI", "http://localhost:19530")
+    MILVUS_URI: str = os.getenv("MILVUS_URI", "")
     MILVUS_API_KEY: str = os.getenv("MILVUS_API_KEY", "")
     MILVUS_DIMENSION: int = 3072
 
