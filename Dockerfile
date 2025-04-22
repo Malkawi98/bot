@@ -22,9 +22,7 @@ COPY --from=requirements-stage /tmp/pyproject.toml /code/pyproject.toml
 RUN pip install uv && uv pip install --system --upgrade .
 RUN uv pip install --system alembic
 
-COPY ./src/app /code/app
-COPY ./src/.env /code/.env
-COPY ./src/alembic.ini /code/alembic.ini
+COPY ./src/ /code/
 RUN ls -lha /code/app  # Debug: list the app directory after copying
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
