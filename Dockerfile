@@ -20,6 +20,7 @@ ENV PYTHONPATH=/code
 COPY --from=requirements-stage /tmp/pyproject.toml /code/pyproject.toml
 
 RUN pip install uv && uv pip install --system --upgrade .
+RUN uv pip install --system alembic
 
 COPY ./src/app /code/app
 COPY ./src/.env /code/.env

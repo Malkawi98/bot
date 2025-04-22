@@ -91,7 +91,7 @@ services:
     container_name: web-app
     restart: always
     # -------- development command --------
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload # Use standard port 8000 internally
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload" # Run migrations then start app
     # -------- production command (example) --------
     # command: gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
     env_file:
