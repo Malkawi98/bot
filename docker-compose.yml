@@ -4,13 +4,13 @@ services:
       context: .
       dockerfile: Dockerfile
     # -------- replace with comment to run with gunicorn --------
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    # command: gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 9000 --reload
+    # command: gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.09000:
     env_file:
       - ./src/.env
     # -------- replace with comment if you are using nginx --------
     ports:
-      - "8000:8000"
+      - "9000:8000"
     # expose:
     #   - "8000"
     depends_on:
