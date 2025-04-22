@@ -33,7 +33,8 @@ dependencies = [
     "faker>=26.0.0",
     "psycopg2-binary>=2.9.9",
     "pytest-mock>=3.14.0",
-    "fastcrud>=0.15.5"
+    "fastcrud>=0.15.5",
+    "langchain-community"
 ]
 
 [build-system]
