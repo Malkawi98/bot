@@ -23,6 +23,7 @@ COPY --from=requirements-stage /tmp/pyproject.toml /code/pyproject.toml
 
 RUN pip install uv && uv pip install --system --upgrade .
 
+RUN ls -lha ./src
 COPY ./src/app /code/app
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
