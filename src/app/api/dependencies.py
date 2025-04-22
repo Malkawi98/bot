@@ -8,17 +8,11 @@ from ..core.db.database import async_get_db
 from ..core.exceptions.http_exceptions import ForbiddenException, RateLimitException, UnauthorizedException
 from ..core.logger import logging
 from ..core.security import TokenType, oauth2_scheme, verify_token
-from ..core.utils.rate_limit import rate_limiter
-from ..crud.crud_rate_limit import crud_rate_limits
 from ..crud.crud_tier import crud_tiers
 from ..crud.crud_users import crud_users
 from ..models.user import User
-from ..schemas.rate_limit import sanitize_path
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_LIMIT = settings.DEFAULT_RATE_LIMIT_LIMIT
-DEFAULT_PERIOD = settings.DEFAULT_RATE_LIMIT_PERIOD
 
 
 async def get_current_user(
@@ -70,35 +64,3 @@ async def get_current_superuser(current_user: Annotated[dict, Depends(get_curren
         raise ForbiddenException("You do not have enough privileges.")
 
     return current_user
-
-
-async def rate_limiter_dependency(
-    request: Request, db: Annotated[AsyncSession, Depends(async_get_db)], user: User | None = Depends(get_optional_user)
-) -> None:
-    if hasattr(request.app.state, "initialization_complete"):
-        await request.app.state.initialization_complete.wait()
-
-    path = sanitize_path(request.url.path)
-    if user:
-        user_id = user["id"]
-        tier = await crud_tiers.get(db, id=user["tier_id"])
-        if tier:
-            rate_limit = await crud_rate_limits.get(db=db, tier_id=tier["id"], path=path)
-            if rate_limit:
-                limit, period = rate_limit["limit"], rate_limit["period"]
-            else:
-                logger.warning(
-                    f"User {user_id} with tier '{tier['name']}' has no specific rate limit for path '{path}'. \
-                        Applying default rate limit."
-                )
-                limit, period = DEFAULT_LIMIT, DEFAULT_PERIOD
-        else:
-            logger.warning(f"User {user_id} has no assigned tier. Applying default rate limit.")
-            limit, period = DEFAULT_LIMIT, DEFAULT_PERIOD
-    else:
-        user_id = request.client.host
-        limit, period = DEFAULT_LIMIT, DEFAULT_PERIOD
-
-    is_limited = await rate_limiter.is_rate_limited(db=db, user_id=user_id, path=path, limit=limit, period=period)
-    if is_limited:
-        raise RateLimitException("Rate limit exceeded.")

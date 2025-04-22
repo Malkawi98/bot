@@ -4,9 +4,10 @@ from typing import Any
 
 import anyio
 import fastapi
-from fastapi import APIRouter, Depends, FastAPI
+from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
+from fastapi.templating import Jinja2Templates
 
 from ..api.dependencies import get_current_superuser
 from ..middleware.client_cache_middleware import ClientCacheMiddleware
@@ -126,6 +127,8 @@ def create_application(
     application = FastAPI(lifespan=lifespan, **kwargs)
     application.include_router(router)
 
+    templates = Jinja2Templates(directory="src/app/templates")
+
     if isinstance(settings, ClientSideCacheSettings):
         application.add_middleware(ClientCacheMiddleware, max_age=settings.CLIENT_CACHE_MAX_AGE)
 
@@ -150,4 +153,8 @@ def create_application(
 
             application.include_router(docs_router)
 
-    return application
+        @application.get("/", include_in_schema=False)
+        async def landing_page(request: Request):
+            return templates.TemplateResponse("landing.html", {"request": request})
+
+        return application

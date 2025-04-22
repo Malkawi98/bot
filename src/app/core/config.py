@@ -1,8 +1,11 @@
 import os
+from pydantic import Field, validator
+from pydantic_settings import BaseSettings
+from dataclasses import Field
 from enum import Enum
 from pathlib import Path
+from typing import Dict, Any
 
-from pydantic_settings import BaseSettings
 from starlette.config import Config
 
 current_file_dir = os.path.dirname(os.path.realpath(__file__))
@@ -83,8 +86,7 @@ class ClientSideCacheSettings(BaseSettings):
 
 
 class DefaultRateLimitSettings(BaseSettings):
-    DEFAULT_RATE_LIMIT_LIMIT: int = config("DEFAULT_RATE_LIMIT_LIMIT", default=10)
-    DEFAULT_RATE_LIMIT_PERIOD: int = config("DEFAULT_RATE_LIMIT_PERIOD", default=3600)
+    ...
 
 
 class EnvironmentOption(Enum):
@@ -97,17 +99,13 @@ class EnvironmentSettings(BaseSettings):
     ENVIRONMENT: EnvironmentOption = config("ENVIRONMENT", default="local")
 
 
-class Settings(
-    AppSettings,
-    PostgresSettings,
-    CryptSettings,
-    FirstUserSettings,
-    TestSettings,
-    ClientSideCacheSettings,
-    DefaultRateLimitSettings,
-    EnvironmentSettings,
-):
+class Settings(AppSettings, PostgresSettings, CryptSettings, FirstUserSettings, TestSettings,
+    ClientSideCacheSettings, DefaultRateLimitSettings, EnvironmentSettings, ):
     pass
+
+    MILVUS_URI: str = os.getenv("MILVUS_URI", "http://localhost:19530")
+    MILVUS_API_KEY: str = os.getenv("MILVUS_API_KEY", "")
+    MILVUS_DIMENSION: int = 3072
 
 
 settings = Settings()
