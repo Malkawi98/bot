@@ -9,7 +9,7 @@ from typing import Dict, Any
 from starlette.config import Config
 
 current_file_dir = os.path.dirname(os.path.realpath(__file__))
-env_path = str(Path(__file__).resolve().parents[3] / ".env")
+env_path = str(Path(__file__).resolve().parents[2] / ".env")
 config = Config(env_path)
 
 
