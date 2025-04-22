@@ -3,8 +3,8 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlalchemy.orm import Session
 
-from src.app.api.dependencies import get_current_user
-from src.app.api.v1.users import oauth2_scheme
+from app.api.dependencies import get_current_user
+from app.api.v1.users import oauth2_scheme
 from tests.conftest import fake, override_dependency
 
 from .helpers import generators, mocks
@@ -62,7 +62,7 @@ def test_delete_user(db: Session, client: TestClient, mocker: MockerFixture) -> 
     override_dependency(get_current_user, mocks.get_current_user(user))
     override_dependency(oauth2_scheme, mocks.oauth2_scheme())
 
-    mocker.patch("src.app.core.security.jwt.decode", return_value={"sub": user.username, "exp": 9999999999})
+    mocker.patch("app.core.security.jwt.decode", return_value={"sub": user.username, "exp": 9999999999})
 
     response = client.delete(f"/api/v1/user/{user.username}")
     assert response.status_code == status.HTTP_200_OK
@@ -75,7 +75,7 @@ def test_delete_db_user(db: Session, mocker: MockerFixture, client: TestClient) 
     override_dependency(get_current_user, mocks.get_current_user(super_user))
     override_dependency(oauth2_scheme, mocks.oauth2_scheme())
 
-    mocker.patch("src.app.core.security.jwt.decode", return_value={"sub": user.username, "exp": 9999999999})
+    mocker.patch("app.core.security.jwt.decode", return_value={"sub": user.username, "exp": 9999999999})
 
     response = client.delete(f"/api/v1/db_user/{user.username}")
     assert response.status_code == status.HTTP_200_OK
