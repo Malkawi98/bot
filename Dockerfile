@@ -15,11 +15,13 @@ FROM python:3.11
 
 WORKDIR /code
 
+ENV PYTHONPATH=/code
+
 COPY --from=requirements-stage /tmp/pyproject.toml /code/pyproject.toml
 # If you have a requirements.txt, uncomment the next line:
 # COPY --from=requirements-stage /tmp/requirements.txt /code/requirements.txt
 
-RUN pip install --no-cache-dir --upgrade .
+RUN pip install uv && uv pip install --system --upgrade .
 
 COPY ./src/app /code/app
 

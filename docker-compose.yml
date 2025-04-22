@@ -8,6 +8,9 @@ services:
     # command: gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.09000:
     env_file:
       - ./src/.env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     # -------- replace with comment if you are using nginx --------
     ports:
       - "9000:9000"
@@ -27,6 +30,9 @@ services:
     command: arq app.core.worker.settings.WorkerSettings
     env_file:
       - ./src/.env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     depends_on:
       - db
       - redis
