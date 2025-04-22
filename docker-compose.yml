@@ -10,7 +10,7 @@ services:
       - ./src/.env
     # -------- replace with comment if you are using nginx --------
     ports:
-      - "9000:8000"
+      - "9000:9000"
     # expose:
     #   - "8000"
     depends_on:
