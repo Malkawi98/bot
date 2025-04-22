@@ -18,12 +18,10 @@ WORKDIR /code
 ENV PYTHONPATH=/code
 
 COPY --from=requirements-stage /tmp/pyproject.toml /code/pyproject.toml
-# If you have a requirements.txt, uncomment the next line:
-# COPY --from=requirements-stage /tmp/requirements.txt /code/requirements.txt
 
 RUN pip install uv && uv pip install --system --upgrade .
 
-RUN ls -lha ./src
 COPY ./src/app /code/app
+RUN ls -lha /code/app  # Debug: list the app directory after copying
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
