@@ -39,11 +39,10 @@ class RAGService:
         for chunk in chunks:
             if len(chunk) > 2048:
                 chunk = chunk[:2048]  # Truncate to fit Milvus VARCHAR limit
-            embedding = self.embedder.embed(chunk)
+            embedding = [self.embedder.embed(chunk)]  # Ensure shape [1, D]
             insert_embedding(embedding, chunk)
 
     def search_similar(self, query: str, top_k: int = 5):
-        embedding = self.embedder.embed(query)
+        embedding = [self.embedder.embed(query)]  # Ensure shape [1, D]
         results = search_embedding(embedding, top_k=top_k)
         return results
-

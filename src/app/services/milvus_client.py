@@ -50,6 +50,8 @@ def list_collections():
 
 
 def insert_embedding(embedding: list[float], text: str, collection_name: str = COLLECTION_NAME):
+    if collection_name not in list_collections():
+        create_collection(collection_name)
     col = Collection(collection_name)
     # Ensure embedding is a list of floats and text is a string
     if not (isinstance(embedding, list) and all(isinstance(x, float) for x in embedding)):
@@ -62,6 +64,8 @@ def insert_embedding(embedding: list[float], text: str, collection_name: str = C
     ])
 
 def search_embedding(embedding: list[float], top_k: int = 5, collection_name: str = COLLECTION_NAME):
+    if collection_name not in list_collections():
+        create_collection(collection_name)
     col = Collection(collection_name)
     results = col.search(
         [embedding],

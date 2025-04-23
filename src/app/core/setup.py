@@ -127,7 +127,7 @@ def create_application(
     application = FastAPI(lifespan=lifespan, **kwargs)
     application.include_router(router)
 
-    templates = Jinja2Templates(directory="app/templates")
+    templates = Jinja2Templates(directory="src/app/templates")
 
     if isinstance(settings, ClientSideCacheSettings):
         application.add_middleware(ClientCacheMiddleware, max_age=settings.CLIENT_CACHE_MAX_AGE)
