@@ -155,6 +155,6 @@ def create_application(
 
         @application.get("/", include_in_schema=False)
         async def landing_page(request: Request):
-            return templates.TemplateResponse("landing.html", {"request": request})
+            return templates.TemplateResponse("enhanced_landing.html", {"request": request})
 
         return application

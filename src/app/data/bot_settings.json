@@ -1,0 +1,25 @@
+{
+  "bot_name": "E-Commerce Support Bot",
+  "welcome_message": "Hello! I'm your support assistant. How can I help you today?",
+  "fallback_message": "I'm sorry, I couldn't understand your request. Could you please rephrase or select one of the quick options below?",
+  "quick_actions": [
+    {
+      "label": "Track Order",
+      "value": "Track my order!"
+    },
+    {
+      "label": "Return Item", 
+      "value": "I want to return an item"
+    },
+    {
+      "label": "Talk to Human",
+      "value": "I want to talk to a human agent"
+    }
+  ],
+  "advanced_settings": {
+    "response_time": "immediate",
+    "language": "en",
+    "tone": "friendly",
+    "max_message_length": 500
+  }
+}

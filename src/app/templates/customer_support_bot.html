@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Support Bot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .chat-container { max-width: 500px; margin: 40px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .chat-messages { height: 350px; overflow-y: auto; padding: 20px; border-bottom: 1px solid #eee; }
+        .chat-input { display: flex; padding: 15px; }
+        .chat-input input { flex: 1; margin-right: 10px; }
+        .bot-message { background: #e9ecef; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; }
+        .user-message { background: #0d6efd; color: #fff; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; align-self: flex-end; }
+        .quick-actions { padding: 10px 20px; border-bottom: 1px solid #eee; }
+        .quick-actions button { margin-right: 8px; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+<div class="chat-container">
+    <div class="quick-actions" id="quick-actions">
+        <!-- Quick action buttons will be inserted here -->
+    </div>
+    <div class="chat-messages d-flex flex-column" id="chat-messages">
+        <!-- Chat messages will appear here -->
+    </div>
+    <form class="chat-input" id="chat-form">
+        <input type="text" class="form-control" id="user-input" placeholder="Type your message..." autocomplete="off" required>
+        <button class="btn btn-primary" type="submit">Send</button>
+        <button class="btn btn-outline-danger ms-2" type="button" id="reset-btn">Start Over</button>
+    </form>
+    <div id="typing-indicator" style="display:none; padding: 0 15px 10px 15px; color: #888; font-style: italic;">Bot is typing...</div>
+</div>
+<script>
+const chatMessages = document.getElementById('chat-messages');
+const chatForm = document.getElementById('chat-form');
+const userInput = document.getElementById('user-input');
+const quickActions = document.getElementById('quick-actions');
+const resetBtn = document.getElementById('reset-btn');
+const typingIndicator = document.getElementById('typing-indicator');
+
+let chatHistory = [];
+
+function appendMessage(text, sender) {
+    const msg = document.createElement('div');
+    msg.className = sender === 'user' ? 'user-message align-self-end' : 'bot-message align-self-start';
+    msg.textContent = text;
+    chatMessages.appendChild(msg);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    chatHistory.push({ sender, text });
+    // Show download button if bot message contains 'download your chat history'
+    if (sender === 'bot' && text.toLowerCase().includes('download your chat history')) {
+        showDownloadButton();
+    }
+}
+
+function setQuickActions(actions) {
+    quickActions.innerHTML = '';
+    actions.forEach(action => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-outline-secondary btn-sm';
+        btn.textContent = action.label;
+        btn.onclick = (e) => {
+            e.preventDefault();
+            sendMessage(action.value);
+        };
+        quickActions.appendChild(btn);
+    });
+}
+
+function showDownloadButton() {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-success btn-sm mt-2';
+    btn.textContent = 'Download Chat';
+    btn.onclick = downloadChat;
+    quickActions.appendChild(btn);
+}
+
+function downloadChat() {
+    let text = chatHistory.map(m => `${m.sender === 'user' ? 'You' : 'Bot'}: ${m.text}`).join('\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'chat_history.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+resetBtn.onclick = () => {
+    chatMessages.innerHTML = '';
+    chatHistory = [];
+    setQuickActions([
+        { label: 'Track Order', value: 'Track my order' },
+        { label: 'Return Item', value: 'I want to return an item' },
+        { label: 'Talk to Human', value: 'I want to talk to a human agent' }
+    ]);
+    appendMessage('Hello! I\'m your support assistant. How can I help you today?', 'bot');
+    document.cookie = 'session_id=; Max-Age=0; path=/;'; // Clear session cookie
+};
+
+async function sendMessage(message) {
+    appendMessage(message, 'user');
+    userInput.value = '';
+    setQuickActions([]);
+    typingIndicator.style.display = 'block';
+    const response = await fetch('/api/bot/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+    });
+    const data = await response.json();
+    typingIndicator.style.display = 'none';
+    appendMessage(data.reply, 'bot');
+    if (data.quick_actions) setQuickActions(data.quick_actions);
+}
+
+chatForm.onsubmit = e => {
+    e.preventDefault();
+    if (userInput.value.trim()) sendMessage(userInput.value.trim());
+};
+
+// Initial bot greeting
+window.onload = () => {
+    appendMessage('Hello! I\'m your support assistant. How can I help you today?', 'bot');
+    setQuickActions([
+        { label: 'Track Order', value: 'Track my order' },
+        { label: 'Return Item', value: 'I want to return an item' },
+        { label: 'Talk to Human', value: 'I want to talk to a human agent' }
+    ]);
+};
+</script>
+</body>
+</html> 

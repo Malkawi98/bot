@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Support Bot</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .chat-bubble {
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+    </style>
+</head>
+<body class="font-sans antialiased text-gray-900 bg-gray-50">
+    <!-- Header -->
+    <header class="gradient-bg text-white">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <span class="text-2xl font-bold">E-Bot</span>
+                    <span class="ml-2 text-sm bg-white text-blue-600 px-2 py-1 rounded-full">Beta</span>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#features" class="hover:text-blue-200 transition">Features</a>
+                    <a href="#how-it-works" class="hover:text-blue-200 transition">How It Works</a>
+                    <a href="#demo" class="hover:text-blue-200 transition">Demo</a>
+                    <a href="/dashboard" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition">Admin Dashboard</a>
+                </div>
+                <div class="md:hidden">
+                    <button id="menu-toggle" class="text-white focus:outline-none">
+                        <i class="fas fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Mobile Menu -->
+            <div id="mobile-menu" class="md:hidden hidden mt-4 pb-4">
+                <a href="#features" class="block py-2 hover:text-blue-200 transition">Features</a>
+                <a href="#how-it-works" class="block py-2 hover:text-blue-200 transition">How It Works</a>
+                <a href="#demo" class="block py-2 hover:text-blue-200 transition">Demo</a>
+                <a href="/dashboard" class="block py-2 mt-2 bg-white text-blue-600 px-4 rounded-lg font-medium hover:bg-blue-50 transition text-center">Admin Dashboard</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="gradient-bg text-white py-20">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col md:flex-row items-center">
+                <div class="md:w-1/2 mb-10 md:mb-0">
+                    <h1 class="text-4xl md:text-5xl font-bold leading-tight mb-6">Intelligent Customer Support for Your E-Commerce Business</h1>
+                    <p class="text-xl mb-8">Enhance customer experience with our AI-powered support bot that handles inquiries, tracks orders, and provides product recommendations 24/7.</p>
+                    <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                        <a href="/customer-support-bot" class="bg-white text-blue-600 px-6 py-3 rounded-lg font-bold hover:bg-blue-50 transition text-center">Try the Bot</a>
+                        <a href="/dashboard" class="border-2 border-white text-white px-6 py-3 rounded-lg font-bold hover:bg-white hover:bg-opacity-10 transition text-center">Admin Dashboard</a>
+                    </div>
+                </div>
+                <div class="md:w-1/2 flex justify-center">
+                    <div class="relative">
+                        <div class="absolute -top-6 -left-6 bg-white text-blue-600 p-4 rounded-lg shadow-lg chat-bubble">
+                            <p class="font-medium">How can I help you today?</p>
+                        </div>
+                        <div class="absolute -bottom-6 -right-6 bg-blue-100 text-blue-800 p-4 rounded-lg shadow-lg chat-bubble" style="animation-delay: 1s;">
+                            <p class="font-medium">Where is my order?</p>
+                        </div>
+                        <img src="https://cdn.pixabay.com/photo/2021/01/06/09/19/ai-5893791_1280.jpg" alt="AI Bot" class="rounded-xl shadow-2xl w-full max-w-md">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold mb-4">Powerful Features</h2>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">Our e-commerce support bot comes packed with features designed to enhance customer experience and streamline support operations.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-white p-8 rounded-xl shadow-md transition duration-300 feature-card">
+                    <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                        <i class="fas fa-shopping-cart text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">Order Management</h3>
+                    <p class="text-gray-600">Allow customers to track orders, get status updates, and manage returns without human intervention.</p>
+                </div>
+                
+                <div class="bg-white p-8 rounded-xl shadow-md transition duration-300 feature-card">
+                    <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                        <i class="fas fa-search text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">Product Recommendations</h3>
+                    <p class="text-gray-600">Intelligent product suggestions based on customer inquiries, preferences, and browsing history.</p>
+                </div>
+                
+                <div class="bg-white p-8 rounded-xl shadow-md transition duration-300 feature-card">
+                    <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                        <i class="fas fa-comments text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">24/7 Availability</h3>
+                    <p class="text-gray-600">Provide instant support to customers around the clock, improving satisfaction and reducing wait times.</p>
+                </div>
+                
+                <div class="bg-white p-8 rounded-xl shadow-md transition duration-300 feature-card">
+                    <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                        <i class="fas fa-brain text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">AI-Powered Responses</h3>
+                    <p class="text-gray-600">Leverages advanced AI to understand customer intent and provide accurate, contextual responses.</p>
+                </div>
+                
+                <div class="bg-white p-8 rounded-xl shadow-md transition duration-300 feature-card">
+                    <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                        <i class="fas fa-chart-line text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">Analytics Dashboard</h3>
+                    <p class="text-gray-600">Gain insights into customer inquiries, satisfaction rates, and bot performance metrics.</p>
+                </div>
+                
+                <div class="bg-white p-8 rounded-xl shadow-md transition duration-300 feature-card">
+                    <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                        <i class="fas fa-user-friends text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">Human Handoff</h3>
+                    <p class="text-gray-600">Seamlessly transfer complex issues to human agents when needed, ensuring customer satisfaction.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="py-20 bg-gray-100">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold mb-4">How It Works</h2>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">Our bot uses advanced AI to understand customer queries and provide helpful responses.</p>
+            </div>
+            
+            <div class="flex flex-col md:flex-row items-center justify-center space-y-8 md:space-y-0 md:space-x-12">
+                <div class="bg-white p-6 rounded-xl shadow-md max-w-xs w-full">
+                    <div class="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center mb-4 mx-auto">
+                        <span class="font-bold">1</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-center mb-2">Customer Inquiry</h3>
+                    <p class="text-gray-600 text-center">Customer asks a question about products, orders, or policies.</p>
+                </div>
+                
+                <div class="hidden md:block">
+                    <i class="fas fa-arrow-right text-3xl text-blue-600"></i>
+                </div>
+                <div class="md:hidden">
+                    <i class="fas fa-arrow-down text-3xl text-blue-600"></i>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-md max-w-xs w-full">
+                    <div class="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center mb-4 mx-auto">
+                        <span class="font-bold">2</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-center mb-2">AI Processing</h3>
+                    <p class="text-gray-600 text-center">Our AI analyzes the query and retrieves relevant information.</p>
+                </div>
+                
+                <div class="hidden md:block">
+                    <i class="fas fa-arrow-right text-3xl text-blue-600"></i>
+                </div>
+                <div class="md:hidden">
+                    <i class="fas fa-arrow-down text-3xl text-blue-600"></i>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-md max-w-xs w-full">
+                    <div class="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center mb-4 mx-auto">
+                        <span class="font-bold">3</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-center mb-2">Instant Response</h3>
+                    <p class="text-gray-600 text-center">Customer receives an accurate and helpful response within seconds.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section -->
+    <section id="demo" class="py-20">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold mb-4">See It In Action</h2>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">Try our e-commerce support bot yourself and experience the power of AI-driven customer service.</p>
+            </div>
+            
+            <div class="flex flex-col lg:flex-row items-center justify-center space-y-12 lg:space-y-0 lg:space-x-16">
+                <div class="lg:w-1/2">
+                    <div class="bg-white p-8 rounded-xl shadow-lg max-w-md mx-auto">
+                        <div class="flex items-center mb-6">
+                            <img src="https://ui-avatars.com/api/?name=Bot&background=0D8ABC&color=fff" alt="Bot Avatar" class="w-10 h-10 rounded-full mr-3">
+                            <div>
+                                <h3 class="font-bold">E-Commerce Support Bot</h3>
+                                <div class="flex items-center">
+                                    <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                                    <span class="text-xs text-gray-500">Online</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4 mb-6">
+                            <div class="flex items-start">
+                                <img src="https://ui-avatars.com/api/?name=Bot&background=0D8ABC&color=fff" alt="Bot Avatar" class="w-8 h-8 rounded-full mr-2">
+                                <div class="bg-gray-100 p-3 rounded-lg max-w-xs">
+                                    <p>Hello! I'm your e-commerce support assistant. How can I help you today?</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start justify-end">
+                                <div class="bg-blue-600 text-white p-3 rounded-lg max-w-xs">
+                                    <p>I ordered a smart watch last week but haven't received any shipping updates.</p>
+                                </div>
+                                <img src="https://ui-avatars.com/api/?name=User&background=0D6EFD&color=fff" alt="User Avatar" class="w-8 h-8 rounded-full ml-2">
+                            </div>
+                            
+                            <div class="flex items-start">
+                                <img src="https://ui-avatars.com/api/?name=Bot&background=0D8ABC&color=fff" alt="Bot Avatar" class="w-8 h-8 rounded-full mr-2">
+                                <div class="bg-gray-100 p-3 rounded-lg max-w-xs">
+                                    <p>I'd be happy to help you with that. Could you please provide your order number so I can check the status for you?</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start justify-end">
+                                <div class="bg-blue-600 text-white p-3 rounded-lg max-w-xs">
+                                    <p>It's #45678</p>
+                                </div>
+                                <img src="https://ui-avatars.com/api/?name=User&background=0D6EFD&color=fff" alt="User Avatar" class="w-8 h-8 rounded-full ml-2">
+                            </div>
+                            
+                            <div class="flex items-start">
+                                <img src="https://ui-avatars.com/api/?name=Bot&background=0D8ABC&color=fff" alt="Bot Avatar" class="w-8 h-8 rounded-full mr-2">
+                                <div class="bg-gray-100 p-3 rounded-lg max-w-xs">
+                                    <p>Thank you! I've checked your order #45678. Your Smart Watch has been shipped and is currently in transit. The estimated delivery date is April 25th. Would you like me to send you the tracking information?</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex space-x-2 mb-4">
+                            <button class="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">Yes, please</button>
+                            <button class="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">No, thanks</button>
+                            <button class="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">Talk to human</button>
+                        </div>
+                        
+                        <div class="flex">
+                            <input type="text" placeholder="Type your message..." class="flex-1 border rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button class="bg-blue-600 text-white p-2 rounded-r-lg">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="lg:w-1/2 space-y-6">
+                    <h3 class="text-2xl font-bold">Experience the Difference</h3>
+                    <p class="text-gray-600">Our AI-powered support bot provides instant, accurate responses to customer inquiries, helping you:</p>
+                    
+                    <ul class="space-y-4">
+                        <li class="flex items-start">
+                            <div class="flex-shrink-0 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mt-1">
+                                <i class="fas fa-check text-white text-xs"></i>
+                            </div>
+                            <p class="ml-3 text-gray-600">Reduce support ticket volume by up to 70%</p>
+                        </li>
+                        <li class="flex items-start">
+                            <div class="flex-shrink-0 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mt-1">
+                                <i class="fas fa-check text-white text-xs"></i>
+                            </div>
+                            <p class="ml-3 text-gray-600">Improve customer satisfaction with 24/7 support</p>
+                        </li>
+                        <li class="flex items-start">
+                            <div class="flex-shrink-0 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mt-1">
+                                <i class="fas fa-check text-white text-xs"></i>
+                            </div>
+                            <p class="ml-3 text-gray-600">Increase sales through personalized product recommendations</p>
+                        </li>
+                        <li class="flex items-start">
+                            <div class="flex-shrink-0 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mt-1">
+                                <i class="fas fa-check text-white text-xs"></i>
+                            </div>
+                            <p class="ml-3 text-gray-600">Free up your support team to handle complex issues</p>
+                        </li>
+                    </ul>
+                    
+                    <div class="pt-4">
+                        <a href="/customer-support-bot" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 transition inline-block">Try the Full Demo</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="gradient-bg text-white py-16">
+        <div class="container mx-auto px-6 text-center">
+            <h2 class="text-3xl font-bold mb-4">Ready to Transform Your Customer Support?</h2>
+            <p class="text-xl mb-8 max-w-2xl mx-auto">Join hundreds of e-commerce businesses that have improved customer satisfaction and reduced support costs with our AI bot.</p>
+            <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                <a href="/dashboard" class="bg-white text-blue-600 px-6 py-3 rounded-lg font-bold hover:bg-blue-50 transition">Get Started</a>
+                <a href="/customer-support-bot" class="border-2 border-white text-white px-6 py-3 rounded-lg font-bold hover:bg-white hover:bg-opacity-10 transition">Try Demo</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col md:flex-row justify-between">
+                <div class="mb-6 md:mb-0">
+                    <h3 class="text-2xl font-bold mb-4">E-Bot</h3>
+                    <p class="text-gray-400 max-w-xs">AI-powered customer support for modern e-commerce businesses.</p>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-8">
+                    <div>
+                        <h4 class="text-lg font-semibold mb-4">Product</h4>
+                        <ul class="space-y-2">
+                            <li><a href="#features" class="text-gray-400 hover:text-white transition">Features</a></li>
+                            <li><a href="#demo" class="text-gray-400 hover:text-white transition">Demo</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition">Pricing</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition">Integrations</a></li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h4 class="text-lg font-semibold mb-4">Resources</h4>
+                        <ul class="space-y-2">
+                            <li><a href="#" class="text-gray-400 hover:text-white transition">Documentation</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition">API</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition">Guides</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition">Support</a></li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h4 class="text-lg font-semibold mb-4">Company</h4>
+                        <ul class="space-y-2">
+                            <li><a href="#" class="text-gray-400 hover:text-white transition">About</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition">Blog</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition">Careers</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition">Contact</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-gray-400">© 2025 E-Bot. All rights reserved.</p>
+                <div class="flex space-x-6 mt-4 md:mt-0">
+                    <a href="#" class="text-gray-400 hover:text-white transition"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="text-gray-400 hover:text-white transition"><i class="fab fa-facebook"></i></a>
+                    <a href="#" class="text-gray-400 hover:text-white transition"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="text-gray-400 hover:text-white transition"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile menu toggle
+        document.getElementById('menu-toggle').addEventListener('click', function() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        });
+        
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+                
+                const target = document.querySelector(targetId);
+                if (target) {
+                    window.scrollTo({
+                        top: target.offsetTop - 100,
+                        behavior: 'smooth'
+                    });
+                    
+                    // Close mobile menu if open
+                    document.getElementById('mobile-menu').classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

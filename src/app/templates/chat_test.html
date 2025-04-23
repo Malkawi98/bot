@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Support Bot - Chat Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .sidebar-active { background-color: rgba(17, 24, 39, 0.8); }
+        .chat-container { height: calc(100vh - 200px); }
+        .chat-messages { height: calc(100% - 70px); }
+        .user-message { background-color: #0d6efd; color: white; border-radius: 18px 18px 0 18px; }
+        .bot-message { background-color: #f1f5f9; color: #1e293b; border-radius: 18px 18px 18px 0; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <!-- Sidebar -->
+        <div id="sidebar" class="bg-gray-900 text-white w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform md:relative md:translate-x-0 transition duration-200 ease-in-out z-20">
+            <div class="flex items-center justify-between px-4">
+                <div class="text-2xl font-semibold">
+                    <span class="text-teal-400">E-Bot</span> Admin
+                </div>
+                <button id="closeSidebar" class="md:hidden rounded-lg focus:outline-none focus:shadow-outline p-1">
+                    <i class="fas fa-times text-white text-lg"></i>
+                </button>
+            </div>
+            <nav class="mt-10">
+                <a href="/bot-config" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+                    <i class="fas fa-cog mr-3"></i>Bot Configuration
+                </a>
+                <a href="/knowledge-base" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+                    <i class="fas fa-book mr-3"></i>Knowledge Base
+                </a>
+                <a href="/chat-test" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg sidebar-active">
+                    <i class="fas fa-comments mr-3"></i>Chat Test
+                </a>
+                <a href="/" class="flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg mt-10">
+                    <i class="fas fa-home mr-3"></i>Back to Home
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-x-hidden overflow-y-auto">
+            <!-- Top Navigation -->
+            <header class="bg-white shadow-md py-4 px-4">
+                <div class="flex items-center justify-between">
+                    <button id="openSidebar" class="md:hidden rounded-lg focus:outline-none focus:shadow-outline p-1">
+                        <i class="fas fa-bars text-gray-800 text-lg"></i>
+                    </button>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-gray-700">Admin User</span>
+                        <img class="h-8 w-8 rounded-full" src="https://ui-avatars.com/api/?name=Admin&background=0D8ABC&color=fff" alt="Admin">
+                    </div>
+                </div>
+            </header>
+
+            <!-- Chat Test Content -->
+            <div id="chat-test-content" class="container mx-auto px-4 py-6">
+                <h1 class="text-2xl font-semibold text-gray-800 mb-6">Chat Test Environment</h1>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <!-- Left Column: Test Controls -->
+                    <div>
+                        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                            <h2 class="text-xl font-semibold mb-4">Test Controls</h2>
+                            
+                            <div class="mb-4">
+                                <label class="block text-gray-700 text-sm font-bold mb-2">
+                                    Test Mode
+                                </label>
+                                <select id="test-mode" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                                    <option value="live">Live Mode</option>
+                                    <option value="debug">Debug Mode</option>
+                                    <option value="simulation">Simulation Mode</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="block text-gray-700 text-sm font-bold mb-2">
+                                    User Persona
+                                </label>
+                                <select id="user-persona" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                                    <option value="new">New Customer</option>
+                                    <option value="returning">Returning Customer</option>
+                                    <option value="angry">Frustrated Customer</option>
+                                    <option value="vip">VIP Customer</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="block text-gray-700 text-sm font-bold mb-2">
+                                    Test Scenarios
+                                </label>
+                                <select id="test-scenario" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                                    <option value="order">Order Tracking</option>
+                                    <option value="return">Return Process</option>
+                                    <option value="product">Product Inquiry</option>
+                                    <option value="payment">Payment Issue</option>
+                                    <option value="shipping">Shipping Question</option>
+                                </select>
+                                <button id="load-scenario" class="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full">
+                                    Load Scenario
+                                </button>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="block text-gray-700 text-sm font-bold mb-2">
+                                    Quick Test Messages
+                                </label>
+                                <div class="space-y-2">
+                                    <button class="quick-test-msg bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-1 px-3 rounded text-sm w-full text-left">
+                                        Where is my order #12345?
+                                    </button>
+                                    <button class="quick-test-msg bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-1 px-3 rounded text-sm w-full text-left">
+                                        How do I return this product?
+                                    </button>
+                                    <button class="quick-test-msg bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-1 px-3 rounded text-sm w-full text-left">
+                                        Do you have wireless earbuds?
+                                    </button>
+                                    <button class="quick-test-msg bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-1 px-3 rounded text-sm w-full text-left">
+                                        My payment was declined
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <button id="reset-chat" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full">
+                                    Reset Conversation
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow-md p-6">
+                            <h2 class="text-xl font-semibold mb-4">Debug Info</h2>
+                            <div id="debug-info" class="text-xs font-mono bg-gray-100 p-3 rounded h-48 overflow-y-auto">
+                                <div class="text-gray-500">[System] Chat session initialized</div>
+                                <div class="text-gray-500">[System] Knowledge base connected</div>
+                                <div class="text-gray-500">[System] Bot ready</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column: Chat Interface -->
+                    <div class="lg:col-span-3">
+                        <div class="bg-white rounded-lg shadow-md p-6 chat-container">
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="flex items-center">
+                                    <img src="https://ui-avatars.com/api/?name=Bot&background=0D8ABC&color=fff" alt="Bot Avatar" class="w-10 h-10 rounded-full mr-3">
+                                    <div>
+                                        <h2 class="font-semibold">E-Commerce Support Bot</h2>
+                                        <div class="flex items-center">
+                                            <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                                            <span class="text-xs text-gray-500">Online</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <button id="export-chat" class="text-blue-500 hover:text-blue-700 mr-2" title="Export Chat">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                    <button id="toggle-debug" class="text-blue-500 hover:text-blue-700" title="Toggle Debug Mode">
+                                        <i class="fas fa-bug"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="chat-messages" class="chat-messages overflow-y-auto p-4 space-y-4">
+                                <!-- Messages will be inserted here -->
+                                <div class="flex items-start mb-4">
+                                    <img src="https://ui-avatars.com/api/?name=Bot&background=0D8ABC&color=fff" alt="Bot Avatar" class="w-8 h-8 rounded-full mr-2">
+                                    <div class="bot-message p-3 max-w-md">
+                                        <p>Hello! I'm your support assistant. How can I help you today?</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <div class="flex items-center" id="quick-actions">
+                                    <button class="quick-action mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-1 px-3 rounded-full text-sm">
+                                        Track Order
+                                    </button>
+                                    <button class="quick-action mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-1 px-3 rounded-full text-sm">
+                                        Return Item
+                                    </button>
+                                    <button class="quick-action mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-1 px-3 rounded-full text-sm">
+                                        Talk to Human
+                                    </button>
+                                </div>
+                                
+                                <form id="chat-form" class="mt-2 flex">
+                                    <input type="text" id="user-input" class="flex-1 border rounded-l-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Type your message...">
+                                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r-lg">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </form>
+                                <div id="typing-indicator" class="text-sm text-gray-500 mt-1 hidden">
+                                    <i class="fas fa-circle-notch fa-spin mr-1"></i> Bot is typing...
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                            <div class="bg-white rounded-lg shadow-md p-6">
+                                <h2 class="text-xl font-semibold mb-4">Response Analysis</h2>
+                                <div class="space-y-4">
+                                    <div>
+                                        <h3 class="font-medium text-gray-700">Response Time</h3>
+                                        <div class="w-full bg-gray-200 rounded-full h-4 mt-1">
+                                            <div class="bg-green-500 h-4 rounded-full" style="width: 15%"></div>
+                                        </div>
+                                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                            <span>0.15s</span>
+                                            <span>Target: &lt;1s</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <h3 class="font-medium text-gray-700">Confidence Score</h3>
+                                        <div class="w-full bg-gray-200 rounded-full h-4 mt-1">
+                                            <div class="bg-blue-500 h-4 rounded-full" style="width: 85%"></div>
+                                        </div>
+                                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                            <span>85%</span>
+                                            <span>Target: &gt;80%</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <h3 class="font-medium text-gray-700">Sentiment Analysis</h3>
+                                        <div class="flex items-center mt-1">
+                                            <i class="fas fa-smile text-green-500 text-2xl mr-2"></i>
+                                            <div class="w-full bg-gray-200 rounded-full h-4">
+                                                <div class="bg-green-500 h-4 rounded-full" style="width: 90%"></div>
+                                            </div>
+                                        </div>
+                                        <div class="text-xs text-gray-500 mt-1">
+                                            Positive: 90% | Neutral: 10% | Negative: 0%
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white rounded-lg shadow-md p-6">
+                                <h2 class="text-xl font-semibold mb-4">Knowledge Sources</h2>
+                                <div class="space-y-3">
+                                    <div class="p-2 border rounded-lg">
+                                        <div class="flex justify-between items-center">
+                                            <h3 class="font-medium">Product Information</h3>
+                                            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">85% Match</span>
+                                        </div>
+                                        <p class="text-sm text-gray-500 mt-1 truncate">Our wireless earbuds feature high-quality sound, long battery life...</p>
+                                    </div>
+                                    
+                                    <div class="p-2 border rounded-lg">
+                                        <div class="flex justify-between items-center">
+                                            <h3 class="font-medium">FAQ Database</h3>
+                                            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">62% Match</span>
+                                        </div>
+                                        <p class="text-sm text-gray-500 mt-1 truncate">Common questions about our audio products and accessories...</p>
+                                    </div>
+                                    
+                                    <div class="p-2 border rounded-lg">
+                                        <div class="flex justify-between items-center">
+                                            <h3 class="font-medium">Return Policies</h3>
+                                            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">45% Match</span>
+                                        </div>
+                                        <p class="text-sm text-gray-500 mt-1 truncate">Guidelines for product returns, refunds, and exchanges...</p>
+                                    </div>
+                                </div>
+                                <button class="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-1 px-3 rounded text-sm w-full">
+                                    View All Knowledge Sources
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mobile sidebar toggle
+        document.getElementById('openSidebar').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.remove('-translate-x-full');
+        });
+        
+        document.getElementById('closeSidebar').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.add('-translate-x-full');
+        });
+        
+        // Chat functionality
+        const chatMessages = document.getElementById('chat-messages');
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const debugInfo = document.getElementById('debug-info');
+        const quickActions = document.getElementById('quick-actions');
+        
+        // Add message to chat
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex items-start mb-4';
+            
+            if (sender === 'user') {
+                messageDiv.innerHTML = `
+                    <div class="flex-1"></div>
+                    <div class="user-message p-3 max-w-md">
+                        <p>${text}</p>
+                    </div>
+                    <img src="https://ui-avatars.com/api/?name=User&background=0D6EFD&color=fff" alt="User Avatar" class="w-8 h-8 rounded-full ml-2">
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <img src="https://ui-avatars.com/api/?name=Bot&background=0D8ABC&color=fff" alt="Bot Avatar" class="w-8 h-8 rounded-full mr-2">
+                    <div class="bot-message p-3 max-w-md">
+                        <p>${text}</p>
+                    </div>
+                `;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Add to debug info
+            const debugEntry = document.createElement('div');
+            debugEntry.className = sender === 'user' ? 'text-blue-600' : 'text-green-600';
+            debugEntry.textContent = `[${sender.toUpperCase()}] ${text}`;
+            debugInfo.appendChild(debugEntry);
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+        }
+        
+        // Send message
+        async function sendMessage(message) {
+            addMessage(message, 'user');
+            userInput.value = '';
+            
+            // Hide quick actions
+            quickActions.innerHTML = '';
+            
+            // Show typing indicator
+            typingIndicator.classList.remove('hidden');
+            
+            // Debug info
+            const debugEntry = document.createElement('div');
+            debugEntry.className = 'text-gray-500';
+            debugEntry.textContent = `[System] Processing message: "${message}"`;
+            debugInfo.appendChild(debugEntry);
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+            
+            // Simulate API call delay
+            setTimeout(async () => {
+                try {
+                    const response = await fetch('/api/v1/bot/message', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ message }),
+                    });
+                    
+                    const data = await response.json();
+                    
+                    // Hide typing indicator
+                    typingIndicator.classList.add('hidden');
+                    
+                    // Add bot response
+                    addMessage(data.reply, 'bot');
+                    
+                    // Add quick actions if available
+                    if (data.quick_actions && data.quick_actions.length > 0) {
+                        data.quick_actions.forEach(action => {
+                            const button = document.createElement('button');
+                            button.className = 'quick-action mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-1 px-3 rounded-full text-sm';
+                            button.textContent = action.label;
+                            button.addEventListener('click', () => sendMessage(action.value));
+                            quickActions.appendChild(button);
+                        });
+                    }
+                    
+                    // Update debug info
+                    const responseDebug = document.createElement('div');
+                    responseDebug.className = 'text-gray-500';
+                    responseDebug.textContent = `[System] Response received: ${JSON.stringify(data)}`;
+                    debugInfo.appendChild(responseDebug);
+                    debugInfo.scrollTop = debugInfo.scrollHeight;
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    typingIndicator.classList.add('hidden');
+                    addMessage('Sorry, there was an error processing your request. Please try again.', 'bot');
+                    
+                    // Update debug info
+                    const errorDebug = document.createElement('div');
+                    errorDebug.className = 'text-red-500';
+                    errorDebug.textContent = `[ERROR] ${error.message}`;
+                    debugInfo.appendChild(errorDebug);
+                    debugInfo.scrollTop = debugInfo.scrollHeight;
+                }
+            }, 1000);
+        }
+        
+        // Form submission
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const message = userInput.value.trim();
+            if (message) {
+                sendMessage(message);
+            }
+        });
+        
+        // Quick test messages
+        document.querySelectorAll('.quick-test-msg').forEach(button => {
+            button.addEventListener('click', function() {
+                sendMessage(this.textContent.trim());
+            });
+        });
+        
+        // Quick actions
+        document.querySelectorAll('.quick-action').forEach(button => {
+            button.addEventListener('click', function() {
+                sendMessage(this.textContent.trim());
+            });
+        });
+        
+        // Reset chat
+        document.getElementById('reset-chat').addEventListener('click', function() {
+            chatMessages.innerHTML = '';
+            quickActions.innerHTML = '';
+            
+            // Add welcome message
+            addMessage('Hello! I\'m your support assistant. How can I help you today?', 'bot');
+            
+            // Add default quick actions
+            const actions = [
+                { label: 'Track Order', value: 'Track my order' },
+                { label: 'Return Item', value: 'I want to return an item' },
+                { label: 'Talk to Human', value: 'I want to talk to a human agent' }
+            ];
+            
+            actions.forEach(action => {
+                const button = document.createElement('button');
+                button.className = 'quick-action mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-1 px-3 rounded-full text-sm';
+                button.textContent = action.label;
+                button.addEventListener('click', () => sendMessage(action.value));
+                quickActions.appendChild(button);
+            });
+            
+            // Update debug info
+            const debugEntry = document.createElement('div');
+            debugEntry.className = 'text-gray-500';
+            debugEntry.textContent = '[System] Chat session reset';
+            debugInfo.appendChild(debugEntry);
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+        });
+        
+        // Load scenario
+        document.getElementById('load-scenario').addEventListener('click', function() {
+            const scenario = document.getElementById('test-scenario').value;
+            const persona = document.getElementById('user-persona').value;
+            
+            let message = '';
+            
+            switch(scenario) {
+                case 'order':
+                    message = 'I need to track my order #45678. It\'s been a week and I haven\'t received it yet.';
+                    break;
+                case 'return':
+                    message = 'I want to return the wireless earbuds I bought last week. They\'re not working properly.';
+                    break;
+                case 'product':
+                    message = 'I\'m looking for a good Bluetooth speaker. What options do you have?';
+                    break;
+                case 'payment':
+                    message = 'My payment was declined when I tried to checkout. What\'s going on?';
+                    break;
+                case 'shipping':
+                    message = 'How long does shipping take to California?';
+                    break;
+            }
+            
+            // Add persona context to debug
+            const debugEntry = document.createElement('div');
+            debugEntry.className = 'text-purple-500';
+            debugEntry.textContent = `[Scenario] Loaded "${scenario}" scenario with "${persona}" persona`;
+            debugInfo.appendChild(debugEntry);
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+            
+            // Send the message
+            if (message) {
+                sendMessage(message);
+            }
+        });
+        
+        // Export chat
+        document.getElementById('export-chat').addEventListener('click', function() {
+            // Get all messages
+            const messages = [];
+            chatMessages.querySelectorAll('.user-message, .bot-message').forEach(msg => {
+                const text = msg.textContent.trim();
+                const isUser = msg.classList.contains('user-message');
+                messages.push(`${isUser ? 'User' : 'Bot'}: ${text}`);
+            });
+            
+            // Create file
+            const content = messages.join('\n\n');
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            // Create download link
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chat-export-${new Date().toISOString().slice(0, 10)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Clean up
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // Update debug info
+            const debugEntry = document.createElement('div');
+            debugEntry.className = 'text-gray-500';
+            debugEntry.textContent = '[System] Chat exported to file';
+            debugInfo.appendChild(debugEntry);
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+        });
+        
+        // Toggle debug mode
+        document.getElementById('toggle-debug').addEventListener('click', function() {
+            const testMode = document.getElementById('test-mode');
+            if (testMode.value === 'debug') {
+                testMode.value = 'live';
+                this.classList.remove('text-green-500');
+                this.classList.add('text-blue-500');
+            } else {
+                testMode.value = 'debug';
+                this.classList.remove('text-blue-500');
+                this.classList.add('text-green-500');
+            }
+            
+            // Update debug info
+            const debugEntry = document.createElement('div');
+            debugEntry.className = 'text-gray-500';
+            debugEntry.textContent = `[System] Test mode changed to: ${testMode.value}`;
+            debugInfo.appendChild(debugEntry);
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+        });
+    </script>
+    <!-- JavaScript for Chat Test -->
+    <script>
+        // DOM Elements
+        const sidebar = document.getElementById('sidebar');
+        const closeSidebarBtn = document.getElementById('closeSidebar');
+        const openSidebarBtn = document.getElementById('openSidebar');
+        // Use existing chatMessages variable from previous script
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const clearButton = document.getElementById('clear-button');
+        const sessionStateDisplay = document.getElementById('session-state');
+        
+        // Session state for the conversation
+        let sessionState = {};
+        
+        // Mobile sidebar toggle
+        closeSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.add('-translate-x-full');
+        });
+        
+        openSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.remove('-translate-x-full');
+        });
+        
+        // Send message on button click
+        sendButton.addEventListener('click', sendMessage);
+        
+        // Send message on Enter key press
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Clear chat history
+        clearButton.addEventListener('click', () => {
+            chatMessages.innerHTML = '';
+            sessionState = {};
+            updateSessionStateDisplay();
+        });
+        
+        // Send message function
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            // Add user message to chat
+            addMessage(message, 'user');
+            messageInput.value = '';
+            
+            // Disable input while waiting for response
+            messageInput.disabled = true;
+            sendButton.disabled = true;
+            
+            try {
+                // Send message to API
+                const response = await fetch('/api/v1/test-message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        session_data: sessionState
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to get bot response');
+                }
+                
+                const data = await response.json();
+                
+                // Add bot response to chat
+                addMessage(data.reply, 'bot');
+                
+                // Update session state
+                if (sessionState.history) {
+                    sessionState.history.push({role: 'user', content: message});
+                    sessionState.history.push({role: 'bot', content: data.reply});
+                } else {
+                    sessionState.history = [
+                        {role: 'user', content: message},
+                        {role: 'bot', content: data.reply}
+                    ];
+                }
+                
+                // Add quick actions if available
+                if (data.quick_actions && data.quick_actions.length > 0) {
+                    addQuickActions(data.quick_actions);
+                }
+                
+                // Add additional data if available
+                if (data.additional_data) {
+                    if (data.additional_data.product_info) {
+                        addProductCard(data.additional_data.product_info);
+                    }
+                    if (data.additional_data.order_info) {
+                        addOrderInfo(data.additional_data.order_info);
+                    }
+                }
+                
+                // Update session state display
+                updateSessionStateDisplay();
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+                addMessage('Sorry, there was an error processing your request.', 'bot');
+            } finally {
+                // Re-enable input
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        }
+        
+        // Add message to chat
+        function addMessage(message, sender) {
+            const messageElement = document.createElement('div');
+            messageElement.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4`;
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = sender === 'user' ? 'user-message max-w-xs md:max-w-md p-3' : 'bot-message max-w-xs md:max-w-md p-3';
+            messageContent.textContent = message;
+            
+            messageElement.appendChild(messageContent);
+            chatMessages.appendChild(messageElement);
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Add quick actions
+        function addQuickActions(actions) {
+            const actionsContainer = document.createElement('div');
+            actionsContainer.className = 'flex flex-wrap justify-start gap-2 mb-4';
+            
+            actions.forEach(action => {
+                const actionButton = document.createElement('button');
+                actionButton.className = 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-full text-sm';
+                actionButton.textContent = action.label;
+                
+                actionButton.addEventListener('click', () => {
+                    messageInput.value = action.value;
+                    sendMessage();
+                });
+                
+                actionsContainer.appendChild(actionButton);
+            });
+            
+            chatMessages.appendChild(actionsContainer);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Add product card
+        function addProductCard(product) {
+            const productCard = document.createElement('div');
+            productCard.className = 'flex justify-start mb-4';
+            
+            const cardContent = document.createElement('div');
+            cardContent.className = 'bg-white rounded-lg shadow-md p-4 max-w-xs md:max-w-md';
+            
+            cardContent.innerHTML = `
+                <div class="flex items-center mb-2">
+                    <div class="w-16 h-16 bg-gray-200 rounded-md flex items-center justify-center mr-4">
+                        <i class="fas fa-box text-gray-500 text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-lg">${product.name}</h3>
+                        <p class="text-teal-600 font-semibold">$${product.price.toFixed(2)}</p>
+                    </div>
+                </div>
+                <p class="text-gray-700 text-sm">${product.description || 'No description available'}</p>
+            `;
+            
+            productCard.appendChild(cardContent);
+            chatMessages.appendChild(productCard);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Add order info
+        function addOrderInfo(order) {
+            const orderCard = document.createElement('div');
+            orderCard.className = 'flex justify-start mb-4';
+            
+            const cardContent = document.createElement('div');
+            cardContent.className = 'bg-white rounded-lg shadow-md p-4 max-w-xs md:max-w-md';
+            
+            cardContent.innerHTML = `
+                <div class="flex items-center mb-2">
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                        <i class="fas fa-shipping-fast text-blue-500"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold">Order #${order.order_id}</h3>
+                        <p class="text-sm text-gray-600">Status: <span class="font-semibold">${order.status}</span></p>
+                    </div>
+                </div>
+                <p class="text-gray-700 text-sm">${order.status_description || ''}</p>
+                ${order.tracking_number ? `<p class="text-sm mt-2">Tracking: <span class="font-mono">${order.tracking_number}</span></p>` : ''}
+                ${order.estimated_delivery ? `<p class="text-sm">Estimated delivery: ${order.estimated_delivery}</p>` : ''}
+            `;
+            
+            orderCard.appendChild(cardContent);
+            chatMessages.appendChild(orderCard);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Update session state display
+        function updateSessionStateDisplay() {
+            sessionStateDisplay.textContent = JSON.stringify(sessionState, null, 2);
+        }
+        
+        // Initialize with a welcome message
+        document.addEventListener('DOMContentLoaded', () => {
+            addMessage('Hello! I\'m your e-commerce support assistant. How can I help you today?', 'bot');
+            addQuickActions([
+                {label: 'Track Order', value: 'I want to track my order'},
+                {label: 'Product Info', value: 'Tell me about your wireless earbuds'},
+                {label: 'Return Policy', value: 'What is your return policy?'}
+            ]);
+        });
+    </script>
+</body>
+</html>

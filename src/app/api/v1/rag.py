@@ -20,8 +20,13 @@ async def rag_context(
 
     if url:
         try:
-            # Strictly validate the URL
-            valid_url = HttpUrl.validate(url)
+            # Strictly validate the URL using Pydantic
+            # HttpUrl doesn't have a validate method, so we create a temporary model
+            class UrlModel(BaseModel):
+                url: HttpUrl
+            
+            # Validate URL
+            valid_url = UrlModel(url=url).url
         except ValidationError:
             raise HTTPException(status_code=400, detail="Invalid URL format.")
         try:

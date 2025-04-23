@@ -36,13 +36,38 @@ class RAGService:
     def add_text_to_milvus(self, text: str):
         splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
         chunks = splitter.split_text(text)
+        embeddings = []
+        texts = []
         for chunk in chunks:
+            if not chunk.strip():
+                continue  # skip empty or whitespace-only chunks
             if len(chunk) > 2048:
                 chunk = chunk[:2048]  # Truncate to fit Milvus VARCHAR limit
-            embedding = [self.embedder.embed(chunk)]  # Ensure shape [1, D]
-            insert_embedding(embedding, chunk)
+            embedding = self.embedder.embed(chunk)
+            print(f"Chunk: {chunk[:30]}... | Embedding type: {type(embedding)}, len: {len(embedding)}")  # Debug
+            if hasattr(embedding, 'shape'):
+                print(f"Embedding shape: {embedding.shape}")
+            embeddings.append(embedding)
+            texts.append(chunk)
+        
+        print(f"Embeddings: {len(embeddings)}, Texts: {len(texts)}")  # Debug
+        if len(embeddings) > 0:
+            print(f"Sample embedding[0] first 10 elements: {embeddings[0][:10]}")
+        
+        # Use insert_embeddings for multiple chunks
+        if len(embeddings) > 0:
+            from .milvus_client import insert_embeddings
+            insert_embeddings(embeddings, texts)
+        else:
+            print("No valid chunks to insert")
 
     def search_similar(self, query: str, top_k: int = 5):
-        embedding = [self.embedder.embed(query)]  # Ensure shape [1, D]
+        # Get a single embedding vector for the query
+        embedding = self.embedder.embed(query)
+        
+        # Debug information
+        print(f"Search query: '{query[:30]}...' | Embedding type: {type(embedding)}, len: {len(embedding)}")
+        
+        # Pass the single embedding vector directly to search_embedding
         results = search_embedding(embedding, top_k=top_k)
         return results

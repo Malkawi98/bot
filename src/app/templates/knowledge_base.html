@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Support Bot - Knowledge Base</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .sidebar-active { background-color: rgba(17, 24, 39, 0.8); }
+        .transition-width { transition: width 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <!-- Sidebar -->
+        <div id="sidebar" class="bg-gray-900 text-white w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform md:relative md:translate-x-0 transition duration-200 ease-in-out z-20">
+            <div class="flex items-center justify-between px-4">
+                <div class="text-2xl font-semibold">
+                    <span class="text-teal-400">E-Bot</span> Admin
+                </div>
+                <button id="closeSidebar" class="md:hidden rounded-lg focus:outline-none focus:shadow-outline p-1">
+                    <i class="fas fa-times text-white text-lg"></i>
+                </button>
+            </div>
+            <nav class="mt-10">
+                <a href="/bot-config" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+                    <i class="fas fa-cog mr-3"></i>Bot Configuration
+                </a>
+                <a href="/knowledge-base" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg sidebar-active">
+                    <i class="fas fa-book mr-3"></i>Knowledge Base
+                </a>
+                <a href="/chat-test" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+                    <i class="fas fa-comments mr-3"></i>Chat Test
+                </a>
+                <a href="/" class="flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg mt-10">
+                    <i class="fas fa-home mr-3"></i>Back to Home
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-x-hidden overflow-y-auto">
+            <!-- Top Navigation -->
+            <header class="bg-white shadow-md py-4 px-4">
+                <div class="flex items-center justify-between">
+                    <button id="openSidebar" class="md:hidden rounded-lg focus:outline-none focus:shadow-outline p-1">
+                        <i class="fas fa-bars text-gray-800 text-lg"></i>
+                    </button>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-gray-700">Admin User</span>
+                        <img class="h-8 w-8 rounded-full" src="https://ui-avatars.com/api/?name=Admin&background=0D8ABC&color=fff" alt="Admin">
+                    </div>
+                </div>
+            </header>
+
+            <!-- Knowledge Base Content -->
+            <div id="knowledge-content" class="container mx-auto px-4 py-6">
+                <h1 class="text-2xl font-semibold text-gray-800 mb-6">Knowledge Base Management</h1>
+                
+                <!-- Vector Store Search Section -->
+                <div id="vector-search-section" class="bg-white rounded-lg shadow-md p-6 mb-6 hidden">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Vector Store Search</h2>
+                    <div class="mb-4">
+                        <div class="flex">
+                            <input id="vector-search-input" class="shadow appearance-none border rounded-l w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" type="text" placeholder="Search the vector store...">
+                            <button id="execute-search-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-r focus:outline-none focus:shadow-outline">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="vector-search-results" class="mt-4 space-y-4">
+                        <!-- Search results will be displayed here -->
+                    </div>
+                    <div class="mt-6">
+                        <h3 class="font-semibold text-gray-700 mb-2">Add New Content to Vector Store</h3>
+                        <textarea id="vector-content-input" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" rows="4" placeholder="Enter content to add to the vector store..."></textarea>
+                        <button id="add-to-vector-store-btn" class="mt-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                            <i class="fas fa-plus mr-1"></i> Add to Vector Store
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left Column: Vector Store Entries -->
+                    <div>
+                        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-xl font-semibold">Knowledge Entries</h2>
+
+                            </div>
+                            <div id="knowledge-entries-list" class="max-h-96 overflow-y-auto">
+                                <!-- Vector store entries will be loaded here -->
+                                <div id="knowledge-entries-loading" class="text-center py-4 text-gray-500">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i> Loading knowledge entries...
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow-md p-6">
+                            <h2 class="text-xl font-semibold mb-4">Import Knowledge</h2>
+                            <form id="import-form">
+                                <div class="mb-4">
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                                        Import From URL
+                                    </label>
+                                    <div class="flex">
+                                        <input type="url" id="import-url" placeholder="https://example.com/docs" class="shadow appearance-none border rounded-l-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                                        <button type="button" id="import-url-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-r-lg">
+                                            Import
+                                        </button>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mt-1">Imported content will be automatically added to the vector store.</p>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                                        Upload File
+                                    </label>
+                                    <div class="flex items-center justify-center w-full">
+                                        <label for="file-upload" class="flex flex-col w-full h-32 border-2 border-dashed border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+                                            <div class="flex flex-col items-center justify-center pt-7">
+                                                <i class="fas fa-cloud-upload-alt text-gray-400 text-3xl"></i>
+                                                <p class="pt-1 text-sm text-gray-500">Drag & drop files here or click to browse</p>
+                                                <p class="text-xs text-gray-400">Supports: PDF, DOCX, TXT, MD, CSV</p>
+                                            </div>
+                                            <input id="file-upload" type="file" class="hidden" accept=".pdf,.docx,.txt,.md,.csv">
+                                        </label>
+                                    </div>
+                                    <div id="file-name" class="mt-2 text-sm text-gray-500 hidden"></div>
+                                </div>
+                                
+                                <div class="flex items-center justify-end">
+                                    <button type="button" id="process-import-btn" class="bg-teal-500 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                                        Process & Import
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Middle Column: Knowledge Entries -->
+                    <div class="col-span-2">
+                        <div class="bg-white rounded-lg shadow-md p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 id="knowledge-editor-title" class="text-xl font-semibold">Knowledge Editor: Select a Source</h2>
+                                <div class="flex space-x-2">
+                                    <button id="add-entry-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm" disabled>
+                                        <i class="fas fa-plus mr-1"></i> Add Entry
+                                    </button>
+                                    <button id="save-all-btn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm" disabled>
+                                        <i class="fas fa-save mr-1"></i> Save All
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <input id="entry-search" type="text" placeholder="Search entries..." class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            
+                            <div id="entries-container" class="space-y-6">
+                                <!-- Knowledge entries will be loaded dynamically -->
+                                <div class="text-center py-8 text-gray-500">
+                                    Select a knowledge source to view entries
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Source Modal -->
+    <div id="add-source-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Add Knowledge Source</h2>
+                <button id="close-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="add-source-form">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="source-name">
+                        Source Name
+                    </label>
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="source-name" type="text" placeholder="e.g., Product Warranties">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="source-description">
+                        Description
+                    </label>
+                    <textarea class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="source-description" rows="3" placeholder="Brief description of this knowledge source"></textarea>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        Source Type
+                    </label>
+                    <div class="mt-2">
+                        <label class="inline-flex items-center">
+                            <input type="radio" class="form-radio" name="source-type" value="manual" checked>
+                            <span class="ml-2">Manual Entries</span>
+                        </label>
+                    </div>
+                    <div class="mt-2">
+                        <label class="inline-flex items-center">
+                            <input type="radio" class="form-radio" name="source-type" value="url">
+                            <span class="ml-2">URL Import</span>
+                        </label>
+                    </div>
+                    <div class="mt-2">
+                        <label class="inline-flex items-center">
+                            <input type="radio" class="form-radio" name="source-type" value="file">
+                            <span class="ml-2">File Import</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-end">
+                    <button type="button" id="cancel-add-source" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mr-2">
+                        Cancel
+                    </button>
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Add Source
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Mobile sidebar toggle
+        document.getElementById('openSidebar').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.remove('-translate-x-full');
+        });
+        
+        document.getElementById('closeSidebar').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.add('-translate-x-full');
+        });
+        
+        // Entry search functionality
+        const entrySearch = document.getElementById('entry-search');
+        entrySearch.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const entries = document.querySelectorAll('#entries-container .entry-item');
+            
+            entries.forEach(entry => {
+                const title = entry.querySelector('h3').textContent.toLowerCase();
+                const content = entry.querySelector('p').textContent.toLowerCase();
+                const tags = Array.from(entry.querySelectorAll('.tag')).map(tag => tag.textContent.toLowerCase());
+                
+                const isMatch = title.includes(searchTerm) || content.includes(searchTerm) || tags.some(tag => tag.includes(searchTerm));
+                entry.style.display = isMatch ? 'block' : 'none';
+            });
+        });
+        
+        // Load all entries from vector store
+        async function loadVectorStoreEntries() {
+            const entriesContainer = document.getElementById('knowledge-entries-list');
+            const loadingElement = document.getElementById('knowledge-entries-loading');
+            
+            try {
+                // Fetch all entries from vector store API
+                const response = await fetch('/api/v1/vector-store/all');
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load knowledge entries');
+                }
+                
+                const data = await response.json();
+                
+                // Remove loading indicator
+                if (loadingElement) {
+                    loadingElement.remove();
+                }
+                
+                // Display knowledge entries
+                if (data.success && data.entries && data.entries.length > 0) {
+                    entriesContainer.innerHTML = `<div class="text-sm text-gray-600 mb-3">Total entries: ${data.count}</div>`;
+                    
+                    data.entries.forEach((entry, index) => {
+                        const entryElement = document.createElement('div');
+                        entryElement.className = 'border-b border-gray-200 py-3 hover:bg-gray-50 transition-colors';
+                        
+                        // Truncate text if it's too long
+                        const truncatedText = entry.text.length > 150 ? entry.text.substring(0, 150) + '...' : entry.text;
+                        
+                        entryElement.innerHTML = `
+                            <div>
+                                <h3 class="font-medium text-gray-800">Entry #${entry.id || index + 1}</h3>
+                                <p class="text-sm text-gray-600">${truncatedText}</p>
+                            </div>
+                        `;
+                        
+                        // Add click event to show full text in a modal
+                        entryElement.addEventListener('click', () => {
+                            showEntryModal(entry);
+                        });
+                        
+                        entriesContainer.appendChild(entryElement);
+                    });
+                } else {
+                    entriesContainer.innerHTML = '<div class="text-center py-4 text-gray-500">No knowledge entries found. Import knowledge to get started.</div>';
+                }
+                
+            } catch (error) {
+                console.error('Error loading knowledge entries:', error);
+                
+                if (loadingElement) {
+                    loadingElement.innerHTML = `<div class="text-center py-4 text-red-500">Error: ${error.message}</div>`;
+                } else {
+                    entriesContainer.innerHTML = `<div class="text-center py-4 text-red-500">Error: ${error.message}</div>`;
+                }
+                
+                showNotification('Error loading knowledge entries', 'error');
+            }
+        }
+        
+        // Show entry details in a modal
+        function showEntryModal(entry) {
+            // Create modal element
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.id = 'entry-modal';
+            
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] overflow-hidden">
+                    <div class="flex justify-between items-center border-b p-4">
+                        <h3 class="text-xl font-semibold">Knowledge Entry #${entry.id}</h3>
+                        <button class="text-gray-500 hover:text-gray-700" id="close-modal">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="p-4 overflow-y-auto max-h-[calc(80vh-8rem)]">
+                        <p class="whitespace-pre-wrap">${entry.text}</p>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Close modal when clicking the close button or outside the modal
+            document.getElementById('close-modal').addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                }
+            });
+        }
+        
+        // Import URL
+        document.getElementById('import-url-btn').addEventListener('click', async () => {
+            const urlInput = document.getElementById('import-url');
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                showNotification('Please enter a valid URL', 'error');
+                return;
+            }
+            
+            try {
+                // Show loading state
+                const importBtn = document.getElementById('import-url-btn');
+                const originalBtnText = importBtn.innerHTML;
+                importBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+                importBtn.disabled = true;
+                
+                // Create form data
+                const formData = new FormData();
+                formData.append('url', url);
+                
+                // Call the RAG context API
+                const response = await fetch('/api/v1/rag/context', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to import URL');
+                }
+                
+                const data = await response.json();
+                
+                // Reset button
+                importBtn.innerHTML = originalBtnText;
+                importBtn.disabled = false;
+                
+                // Show success message
+                showNotification('URL imported successfully');
+                urlInput.value = '';
+                
+                // Refresh vector store entries
+                loadVectorStoreEntries();
+                
+            } catch (error) {
+                console.error('Error importing URL:', error);
+                importBtn.innerHTML = 'Import';
+                importBtn.disabled = false;
+                showNotification('Error importing URL: ' + error.message, 'error');
+            }
+        });
+        
+        // File upload handling
+        document.getElementById('file-upload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const fileNameDiv = document.getElementById('file-name');
+                fileNameDiv.textContent = `Selected file: ${file.name}`;
+                fileNameDiv.classList.remove('hidden');
+            }
+        });
+        
+        // Process and import file
+        document.getElementById('process-import-btn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('file-upload');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showNotification('Please select a file to upload', 'error');
+                return;
+            }
+            
+            // Show loading state
+            const importBtn = document.getElementById('process-import-btn');
+            const originalText = importBtn.innerHTML;
+            importBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
+            importBtn.disabled = true;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                // Use the rag/context endpoint for file processing
+                const response = await fetch('/api/v1/rag/context', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to process file');
+                }
+                
+                const result = await response.json();
+                
+                if (result.text) {
+                    // Add the extracted text to the vector store
+                    const addResponse = await fetch('/api/v1/vector-store/add', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ text: result.text })
+                    });
+                    
+                    if (!addResponse.ok) {
+                        throw new Error('Failed to add content to vector store');
+                    }
+                    
+                    const addResult = await addResponse.json();
+                    
+                    if (addResult.success) {
+                        showNotification('File imported successfully');
+                        fileInput.value = '';
+                        document.getElementById('file-name').classList.add('hidden');
+                        // Reload knowledge sources to show updated counts
+                        loadKnowledgeSources();
+                    } else {
+                        showNotification(addResult.message || 'Failed to add content to vector store', 'error');
+                    }
+                } else {
+                    showNotification('No content extracted from file', 'error');
+                }
+            } catch (error) {
+                console.error('Error importing file:', error);
+                showNotification('Error importing file: ' + error.message, 'error');
+            } finally {
+                // Restore button state
+                importBtn.innerHTML = originalText;
+                importBtn.disabled = false;
+            }
+        });
+        
+        // Create a new knowledge source
+        sourceForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                name: document.getElementById('source-name').value,
+                description: document.getElementById('source-description').value,
+                source_type: document.getElementById('source-type').value,
+                url: document.getElementById('source-url').value || undefined
+            };
+            
+            try {
+                const response = await fetch('/api/v1/knowledge-sources', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to create knowledge source');
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Knowledge source created successfully');
+                    sourceModal.classList.add('hidden');
+                    sourceForm.reset();
+                    loadKnowledgeSources();
+                } else {
+                    showNotification(result.message || 'Failed to create knowledge source', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error creating knowledge source:', error);
+                showNotification('Error creating knowledge source', 'error');
+            }
+        });
+        
+        // Create a new knowledge entry
+        entryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const tagsInput = document.getElementById('entry-tags').value;
+            const tags = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag);
+            
+            const data = {
+                source_id: document.getElementById('entry-source-id').value,
+                title: document.getElementById('entry-title').value,
+                content: document.getElementById('entry-content').value,
+                tags: tags
+            };
+            
+            try {
+                const response = await fetch('/api/v1/knowledge-entries', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to create knowledge entry');
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Knowledge entry created successfully');
+                    entryModal.classList.add('hidden');
+                    entryForm.reset();
+                    loadKnowledgeEntries(selectedSourceId);
+                    loadKnowledgeSources(); // Refresh sources to update entry count
+                } else {
+                    showNotification(result.message || 'Failed to create knowledge entry', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error creating knowledge entry:', error);
+                showNotification('Error creating knowledge entry', 'error');
+            }
+        });
+        
+        // Delete a knowledge source
+        async function deleteKnowledgeSource(sourceId) {
+            try {
+                const response = await fetch(`/api/v1/knowledge-sources/${sourceId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to delete knowledge source');
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Knowledge source deleted successfully');
+                    loadKnowledgeSources();
+                    
+                    // Clear entries if the deleted source was selected
+                    if (selectedSourceId === sourceId) {
+                        selectedSourceId = null;
+                        entriesContainer.innerHTML = '';
+                        document.getElementById('entries-section').classList.add('hidden');
+                    }
+                } else {
+                    showNotification(result.message || 'Failed to delete knowledge source', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error deleting knowledge source:', error);
+                showNotification('Error deleting knowledge source', 'error');
+            }
+        }
+        
+        // Delete a knowledge entry
+        async function deleteKnowledgeEntry(entryId) {
+            try {
+                const response = await fetch(`/api/v1/knowledge-entries/${entryId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to delete knowledge entry');
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Knowledge entry deleted successfully');
+                    loadKnowledgeEntries(selectedSourceId);
+                    loadKnowledgeSources(); // Refresh sources to update entry count
+                } else {
+                    showNotification(result.message || 'Failed to delete knowledge entry', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error deleting knowledge entry:', error);
+                showNotification('Error deleting knowledge entry', 'error');
+            }
+        }
+        
+        // Format date for display
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+        
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `fixed bottom-4 right-4 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white px-4 py-2 rounded shadow-lg z-50`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+        
+        // Toggle URL input based on source type
+        document.getElementById('source-type').addEventListener('change', (e) => {
+            const urlField = document.getElementById('url-field');
+            if (e.target.value === 'url') {
+                urlField.classList.remove('hidden');
+            } else {
+                urlField.classList.add('hidden');
+            }
+        });
+        
+        // Vector Store Search functionality
+        vectorSearchBtn.addEventListener('click', () => {
+            // Toggle vector search section
+            if (vectorSearchSection.classList.contains('hidden')) {
+                vectorSearchSection.classList.remove('hidden');
+                vectorSearchBtn.classList.add('bg-blue-700');
+                vectorSearchBtn.classList.remove('bg-blue-500');
+            } else {
+                vectorSearchSection.classList.add('hidden');
+                vectorSearchBtn.classList.remove('bg-blue-700');
+                vectorSearchBtn.classList.add('bg-blue-500');
+            }
+        });
+        
+        // Execute vector search
+        executeSearchBtn.addEventListener('click', executeVectorSearch);
+        vectorSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                executeVectorSearch();
+            }
+        });
+        
+        async function executeVectorSearch() {
+            const query = vectorSearchInput.value.trim();
+            if (!query) {
+                showNotification('Please enter a search query', 'error');
+                return;
+            }
+            
+            try {
+                // Show loading indicator
+                vectorSearchResults.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i> Searching vector store...</div>';
+                
+                // Call the API to search the vector store
+                const response = await fetch(`/api/v1/vector-store/entries?query=${encodeURIComponent(query)}`);
+                if (!response.ok) {
+                    throw new Error('Failed to search vector store');
+                }
+                
+                const results = await response.json();
+                
+                // Display the results
+                if (results.length === 0) {
+                    vectorSearchResults.innerHTML = '<div class="text-center py-4 text-gray-500">No results found. Try a different query or add new content.</div>';
+                    return;
+                }
+                
+                vectorSearchResults.innerHTML = '';
+                results.forEach(result => {
+                    const resultCard = document.createElement('div');
+                    resultCard.className = 'bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow';
+                    
+                    resultCard.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-semibold text-lg">${result.title}</h3>
+                            <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Similarity: ${(1 - result.similarity).toFixed(4)}</span>
+                        </div>
+                        <div class="mt-2">
+                            <p class="text-gray-700">${result.content}</p>
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-1">
+                            ${result.tags.map(tag => `<span class="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full">${tag}</span>`).join('')}
+                        </div>
+                    `;
+                    
+                    vectorSearchResults.appendChild(resultCard);
+                });
+                
+            } catch (error) {
+                console.error('Error searching vector store:', error);
+                vectorSearchResults.innerHTML = `<div class="text-center py-4 text-red-500">Error: ${error.message}</div>`;
+                showNotification('Error searching vector store', 'error');
+            }
+        }
+        
+        // Add content to vector store
+        addToVectorStoreBtn.addEventListener('click', async () => {
+            const content = vectorContentInput.value.trim();
+            if (!content) {
+                showNotification('Please enter content to add', 'error');
+                return;
+            }
+            
+            try {
+                // Call the API to add content to the vector store
+                const response = await fetch('/api/v1/vector-store/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: content })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to add content to vector store');
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Content added to vector store successfully');
+                    vectorContentInput.value = '';
+                    
+                    // If there's a search query, refresh the search results
+                    if (vectorSearchInput.value.trim()) {
+                        executeVectorSearch();
+                    }
+                } else {
+                    showNotification(result.message || 'Failed to add content to vector store', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error adding content to vector store:', error);
+                showNotification('Error adding content to vector store', 'error');
+            }
+        });
+        
+        // Load knowledge sources on page load
+        document.addEventListener('DOMContentLoaded', loadKnowledgeSources);
+    </script>
+</body>
+</html>
