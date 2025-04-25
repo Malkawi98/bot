@@ -10,7 +10,7 @@ rag_service = RAGService()
 
 @router.get("/rag/ui", response_class=HTMLResponse)
 async def rag_form(request: Request):
-    return templates.TemplateResponse("rag_form.html", {"request": request, "result": None, "error": None, "search_results": None})
+    return templates.TemplateResponse(request, "rag_form.html", {"result": None, "error": None, "search_results": None})
 
 @router.post("/rag/ui", response_class=HTMLResponse)
 async def rag_submit(
@@ -46,4 +46,4 @@ async def rag_submit(
             result = f"Text extracted and stored in Milvus.\nPreview:\n{text[:500]}{'...' if len(text) > 500 else ''}"
     else:
         error = "Please provide a URL, upload a file, or enter a search query."
-    return templates.TemplateResponse("rag_form.html", {"request": request, "result": result, "error": error, "search_results": search_results}) 
+    return templates.TemplateResponse(request, "rag_form.html", {"result": result, "error": error, "search_results": search_results})

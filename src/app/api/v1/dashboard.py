@@ -115,14 +115,14 @@ async def landing_page(request: Request):
     """
     Enhanced landing page for the e-commerce support bot
     """
-    return templates.TemplateResponse("enhanced_landing.html", {"request": request})
+    return templates.TemplateResponse(request, "enhanced_landing.html")
 
 @router.get("/customer-support-bot", response_class=HTMLResponse)
 async def customer_support_bot(request: Request):
     """
     Customer-facing support bot interface
     """
-    return templates.TemplateResponse("customer_support_bot.html", {"request": request})
+    return templates.TemplateResponse(request, "customer_support_bot.html")
 
 
 
@@ -144,8 +144,7 @@ async def bot_config(request: Request, db: Session = Depends(get_db)):
     # Format settings for UI
     bot_config = format_bot_config(db_settings)
     
-    return templates.TemplateResponse("bot_config.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "bot_config.html", {
         "bot_config": bot_config
     })
 
@@ -191,8 +190,7 @@ async def knowledge_base(request: Request):
         print("Using mock data as fallback")
         formatted_entries = mock_product_entries
     
-    return templates.TemplateResponse("knowledge_base.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "knowledge_base.html", {
         "sources": mock_knowledge_sources,
         "entries": formatted_entries
     })
@@ -209,8 +207,7 @@ async def langgraph_chat_test(request: Request):
     """
     LangGraph chat testing interface
     """
-    return templates.TemplateResponse("langgraph_chat_test.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "langgraph_chat_test.html", {
         "config": bot_config
     })
 

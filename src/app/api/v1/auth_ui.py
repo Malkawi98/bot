@@ -11,4 +11,4 @@ async def login_page(request: Request):
     """
     Login page for the admin dashboard
     """
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request, "login.html")
