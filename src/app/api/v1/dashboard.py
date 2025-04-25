@@ -15,8 +15,8 @@ from app.core.bot_settings import get_bot_settings, save_bot_settings, update_bo
 from app.core.db.database import get_db
 
 # Setup templates
-templates_dir = Path(__file__).resolve().parent.parent.parent / "templates"
-templates = Jinja2Templates(directory=str(templates_dir))
+# Use absolute path for Docker compatibility
+templates = Jinja2Templates(directory="/code/app/templates")
 
 router = APIRouter(tags=["dashboard"])
 
