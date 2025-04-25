@@ -127,6 +127,7 @@ def create_application(
     application = FastAPI(lifespan=lifespan, **kwargs)
     application.include_router(router)
 
+    # Use a single consistent template directory path for Docker compatibility
     templates = Jinja2Templates(directory="/code/app/templates")
 
     if isinstance(settings, ClientSideCacheSettings):

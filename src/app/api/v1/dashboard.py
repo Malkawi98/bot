@@ -14,8 +14,7 @@ from sqlalchemy.orm import Session
 from app.core.bot_settings import get_bot_settings, save_bot_settings, update_bot_settings, get_bot_settings_model
 from app.core.db.database import get_db
 
-# Setup templates
-# Use absolute path for Docker compatibility
+# Use a single consistent template directory path for Docker compatibility
 templates = Jinja2Templates(directory="/code/app/templates")
 
 router = APIRouter(tags=["dashboard"])

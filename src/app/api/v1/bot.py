@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["bot"])
 
-# Change template directory for Docker compatibility
+# Use a single consistent template directory path for Docker compatibility
 templates = Jinja2Templates(directory="/code/app/templates")
 
 # Initialize RAG service
