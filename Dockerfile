@@ -23,6 +23,7 @@ RUN pip install uv && uv pip install --system --upgrade .
 RUN uv pip install --system alembic
 
 COPY ./src/ /code/
+COPY ./alembic.ini /code/alembic.ini  # Copy alembic.ini for migrations
 RUN ls -lha /code/app  # Debug: list the app directory after copying
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
