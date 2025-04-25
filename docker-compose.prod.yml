@@ -23,7 +23,8 @@ services:
         condition: service_healthy
       milvus:
         condition: service_healthy
-    # No volumes for code in production!
+    volumes:
+      - ./src/app/templates:/code/app/templates # Mount templates directory
 
   db:
     image: postgres:15-alpine
