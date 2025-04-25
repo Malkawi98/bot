@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Support Bot - LangGraph Chat Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .sidebar-active { background-color: rgba(17, 24, 39, 0.8); }
+        .transition-width { transition: width 0.3s ease-in-out; }
+        .chat-bubble-user {
+            background-color: #f3f4f6;
+            border-radius: 18px 18px 18px 4px;
+        }
+        .chat-bubble-bot {
+            background-color: #e5f7ff;
+            border-radius: 18px 18px 4px 18px;
+        }
+        .typing-indicator span {
+            animation: blink 1.4s infinite both;
+        }
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes blink {
+            0% { opacity: 0.1; }
+            20% { opacity: 1; }
+            100% { opacity: 0.1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <!-- Sidebar -->
+        <div id="sidebar" class="bg-gray-900 text-white w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform md:relative md:translate-x-0 transition duration-200 ease-in-out z-20">
+            <div class="flex items-center justify-between px-4">
+                <div class="text-2xl font-semibold">
+                    <span class="text-teal-400">E-Bot</span> Admin
+                </div>
+                <button id="closeSidebar" class="md:hidden rounded-lg focus:outline-none focus:shadow-outline p-1">
+                    <i class="fas fa-times text-white text-lg"></i>
+                </button>
+            </div>
+            <nav class="mt-10">
+                <a href="/bot-config" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+                    <i class="fas fa-cog mr-3"></i>Bot Configuration
+                </a>
+                <a href="/knowledge-base" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+                    <i class="fas fa-book mr-3"></i>Knowledge Base
+                </a>
+                <a href="/langgraph-chat-test" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg sidebar-active">
+                    <i class="fas fa-project-diagram mr-3"></i>LangGraph Chat
+                </a>
+                <a href="/" class="flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg mt-10">
+                    <i class="fas fa-home mr-3"></i>Back to Home
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-x-hidden overflow-y-auto">
+            <!-- Top Navigation -->
+            <header class="bg-white shadow-md py-4 px-4">
+                <div class="flex items-center justify-between">
+                    <button id="openSidebar" class="md:hidden rounded-lg focus:outline-none focus:shadow-outline p-1">
+                        <i class="fas fa-bars text-gray-800 text-lg"></i>
+                    </button>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-gray-700">Admin User</span>
+                        <img class="h-8 w-8 rounded-full" src="https://ui-avatars.com/api/?name=Admin&background=0D8ABC&color=fff" alt="Admin">
+                    </div>
+                </div>
+            </header>
+
+            <!-- Chat Test Content -->
+            <div class="container mx-auto px-4 py-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-semibold text-gray-800">LangGraph Chat Test</h1>
+                    <div class="flex space-x-2">
+                        <button id="clear-chat-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
+                            <i class="fas fa-trash mr-2"></i>Clear Chat
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex flex-col h-[calc(100vh-280px)]">
+                        <!-- Chat Messages Area -->
+                        <div id="chat-messages" class="flex-1 overflow-y-auto mb-4 space-y-4 p-2">
+                            <!-- Bot welcome message -->
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0 mr-3">
+                                    <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                                        <i class="fas fa-robot"></i>
+                                    </div>
+                                </div>
+                                <div class="chat-bubble-bot p-3 max-w-3xl">
+                                    <p>Hello! I'm your E-Commerce support assistant powered by LangGraph. How can I help you today?</p>
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        <button class="quick-action-btn bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full">
+                                            Check order status
+                                        </button>
+                                        <button class="quick-action-btn bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full">
+                                            Return policy
+                                        </button>
+                                        <button class="quick-action-btn bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full">
+                                            Are wireless earbuds in stock?
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Chat Input Area -->
+                        <div class="border-t pt-4">
+                            <form id="chat-form" class="flex">
+                                <input type="text" id="message-input" class="flex-1 border rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Type your message here...">
+                                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white rounded-r-lg px-4 py-2">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Debug Panel -->
+                <div class="mt-6 bg-white rounded-lg shadow-md p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">Debug Panel</h2>
+                        <div class="flex space-x-2">
+                            <button id="toggle-thinking" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded text-sm">
+                                <i class="fas fa-brain"></i> Show Thinking
+                            </button>
+                            <button id="toggle-debug" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-3 rounded text-sm">
+                                <i class="fas fa-code"></i> Toggle Debug
+                            </button>
+                        </div>
+                    </div>
+                    <div id="debug-content" class="">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-semibold mb-2">Last Request:</h3>
+                            <pre id="last-request" class="bg-gray-800 text-green-400 p-3 rounded overflow-x-auto text-sm"></pre>
+                        </div>
+                        <div class="mb-4">
+                            <h3 class="text-lg font-semibold mb-2">Last Response:</h3>
+                            <pre id="last-response" class="bg-gray-800 text-green-400 p-3 rounded overflow-x-auto text-sm"></pre>
+                        </div>
+                        <div id="thinking-process-container" class="hidden">
+                            <h3 class="text-lg font-semibold mb-2">Thinking Process:</h3>
+                            <div id="thinking-process" class="bg-gray-800 text-yellow-300 p-3 rounded overflow-x-auto text-sm max-h-96 overflow-y-auto"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle sidebar on mobile
+        document.getElementById('openSidebar').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.remove('-translate-x-full');
+        });
+        
+        document.getElementById('closeSidebar').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.add('-translate-x-full');
+        });
+        
+        // Toggle debug panel
+        document.getElementById('toggle-debug').addEventListener('click', () => {
+            const debugContent = document.getElementById('debug-content');
+            debugContent.classList.toggle('hidden');
+        });
+        
+        // Toggle thinking process button state
+        let showThinkingEnabled = false;
+        const toggleThinkingBtn = document.getElementById('toggle-thinking');
+        
+        toggleThinkingBtn.addEventListener('click', () => {
+            showThinkingEnabled = !showThinkingEnabled;
+            
+            if (showThinkingEnabled) {
+                toggleThinkingBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                toggleThinkingBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+                toggleThinkingBtn.innerHTML = '<i class="fas fa-brain"></i> Thinking: ON';
+            } else {
+                toggleThinkingBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                toggleThinkingBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+                toggleThinkingBtn.innerHTML = '<i class="fas fa-brain"></i> Show Thinking';
+                
+                // Hide thinking process container
+                document.getElementById('thinking-process-container').classList.add('hidden');
+            }
+        });
+        
+        // Chat functionality
+        const chatMessages = document.getElementById('chat-messages');
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        const clearChatBtn = document.getElementById('clear-chat-btn');
+        
+        // Clear chat
+        clearChatBtn.addEventListener('click', () => {
+            // Keep only the first welcome message
+            const welcomeMessage = chatMessages.firstElementChild;
+            chatMessages.innerHTML = '';
+            chatMessages.appendChild(welcomeMessage);
+        });
+        
+        // Handle quick action buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('quick-action-btn')) {
+                messageInput.value = e.target.textContent.trim();
+                chatForm.dispatchEvent(new Event('submit'));
+            }
+        });
+        
+        // Send message
+        async function sendMessage(message, showThinking = false) {
+            // Add user message to chat
+            addMessage('user', message);
+            
+            // Show typing indicator
+            addTypingIndicator();
+            
+            try {
+                // Send message to API with debug parameter if thinking process is requested
+                const response = await fetch(`/api/v1/v2/bot/message${showThinking ? '?debug=true' : ''}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Remove typing indicator
+                removeTypingIndicator();
+                
+                // Add bot response to chat
+                addBotResponse(data);
+                
+                // Update debug panel
+                document.getElementById('last-request').textContent = JSON.stringify({ message }, null, 2);
+                document.getElementById('last-response').textContent = JSON.stringify(data, null, 2);
+                
+                // Display thinking process if available
+                const thinkingContainer = document.getElementById('thinking-process-container');
+                const thinkingProcess = document.getElementById('thinking-process');
+                
+                if (data.thinking_process && data.thinking_process.length > 0) {
+                    thinkingProcess.innerHTML = formatThinkingProcess(data.thinking_process);
+                    thinkingContainer.classList.remove('hidden');
+                } else {
+                    thinkingContainer.classList.add('hidden');
+                }
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+                
+                // Remove typing indicator
+                removeTypingIndicator();
+                
+                // Add error message
+                addMessage('bot', `Sorry, there was an error processing your request: ${error.message}`);
+            }
+        }
+        
+        // Format thinking process for display
+        function formatThinkingProcess(thinkingProcess) {
+            let html = '';
+            
+            thinkingProcess.forEach((step, index) => {
+                if (step.type === 'stdout') {
+                    html += `<div class="mb-2 p-2 border-l-4 border-blue-500 bg-gray-900">
+                        <div class="font-bold text-blue-400">System Output:</div>
+                        <pre class="whitespace-pre-wrap text-gray-300">${escapeHtml(step.content)}</pre>
+                    </div>`;
+                } else if (step.type === 'chain_start') {
+                    html += `<div class="mb-2 p-2 border-l-4 border-green-500 bg-gray-900">
+                        <div class="font-bold text-green-400">Chain Started: ${escapeHtml(step.name)}</div>
+                        <pre class="whitespace-pre-wrap text-gray-300">${escapeHtml(step.inputs)}</pre>
+                    </div>`;
+                } else if (step.type === 'chain_end') {
+                    html += `<div class="mb-2 p-2 border-l-4 border-green-500 bg-gray-900">
+                        <div class="font-bold text-green-400">Chain Completed</div>
+                        <pre class="whitespace-pre-wrap text-gray-300">${escapeHtml(step.outputs)}</pre>
+                    </div>`;
+                } else if (step.type === 'tool_start') {
+                    html += `<div class="mb-2 p-2 border-l-4 border-purple-500 bg-gray-900">
+                        <div class="font-bold text-purple-400">Tool Started: ${escapeHtml(step.name)}</div>
+                        <pre class="whitespace-pre-wrap text-gray-300">${escapeHtml(step.input)}</pre>
+                    </div>`;
+                } else if (step.type === 'tool_end') {
+                    html += `<div class="mb-2 p-2 border-l-4 border-purple-500 bg-gray-900">
+                        <div class="font-bold text-purple-400">Tool Completed</div>
+                        <pre class="whitespace-pre-wrap text-gray-300">${escapeHtml(step.output)}</pre>
+                    </div>`;
+                } else if (step.type === 'text') {
+                    html += `<div class="mb-2 p-2 border-l-4 border-yellow-500 bg-gray-900">
+                        <div class="font-bold text-yellow-400">LLM Thinking:</div>
+                        <pre class="whitespace-pre-wrap text-gray-300">${escapeHtml(step.content)}</pre>
+                    </div>`;
+                }
+            });
+            
+            return html || '<div class="text-gray-400">No thinking process available</div>';
+        }
+        
+        // Helper function to escape HTML
+        function escapeHtml(unsafe) {
+            if (typeof unsafe !== 'string') return String(unsafe);
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+        
+        // Add message to chat
+        function addMessage(type, content, extras = {}) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex items-start';
+            
+            let avatar, bubbleClass;
+            
+            if (type === 'user') {
+                messageDiv.className += ' justify-end';
+                avatar = `<div class="flex-shrink-0 ml-3">
+                            <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-700">
+                                <i class="fas fa-user"></i>
+                            </div>
+                          </div>`;
+                bubbleClass = 'chat-bubble-user';
+            } else {
+                avatar = `<div class="flex-shrink-0 mr-3">
+                            <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                          </div>`;
+                bubbleClass = 'chat-bubble-bot';
+            }
+            
+            let quickActionsHtml = '';
+            if (extras.quickActions && extras.quickActions.length > 0) {
+                quickActionsHtml = `
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        ${extras.quickActions.map(qa => `
+                            <button class="quick-action-btn bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full">
+                                ${qa.label}
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            let productsHtml = '';
+            if (extras.products && extras.products.length > 0) {
+                productsHtml = `
+                    <div class="mt-3 border-t pt-2">
+                        <p class="text-sm font-semibold mb-2">Product Information:</p>
+                        ${extras.products.map(product => `
+                            <div class="flex items-center bg-gray-50 p-2 rounded">
+                                <img src="${product.image_url}" alt="${product.name}" class="w-12 h-12 object-cover rounded">
+                                <div class="ml-2">
+                                    <p class="font-semibold">${product.name}</p>
+                                    <p class="text-sm">$${product.price.toFixed(2)}</p>
+                                    <p class="text-xs text-gray-600">${product.description || ''}</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            let orderInfoHtml = '';
+            if (extras.orderInfo) {
+                const order = extras.orderInfo;
+                orderInfoHtml = `
+                    <div class="mt-3 border-t pt-2">
+                        <p class="text-sm font-semibold mb-2">Order Information:</p>
+                        <div class="bg-gray-50 p-2 rounded">
+                            <p><span class="font-semibold">Order ID:</span> ${order.order_id}</p>
+                            <p><span class="font-semibold">Status:</span> ${order.status}</p>
+                            ${order.status_description ? `<p><span class="font-semibold">Details:</span> ${order.status_description}</p>` : ''}
+                            ${order.tracking_number ? `<p><span class="font-semibold">Tracking:</span> ${order.tracking_number}</p>` : ''}
+                            ${order.estimated_delivery ? `<p><span class="font-semibold">Estimated Delivery:</span> ${order.estimated_delivery}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (type === 'user') {
+                messageDiv.innerHTML = `
+                    <div class="${bubbleClass} p-3 max-w-xl">
+                        <p>${content}</p>
+                    </div>
+                    ${avatar}
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    ${avatar}
+                    <div class="${bubbleClass} p-3 max-w-3xl">
+                        <p>${content}</p>
+                        ${quickActionsHtml}
+                        ${productsHtml}
+                        ${orderInfoHtml}
+                    </div>
+                `;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Add typing indicator
+        function addTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typing-indicator';
+            typingDiv.className = 'flex items-start';
+            typingDiv.innerHTML = `
+                <div class="flex-shrink-0 mr-3">
+                    <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                </div>
+                <div class="chat-bubble-bot p-3">
+                    <div class="typing-indicator">
+                        <span>.</span><span>.</span><span>.</span>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Remove typing indicator
+        function removeTypingIndicator() {
+            const typingIndicator = document.getElementById('typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+        
+        // Add bot response
+        function addBotResponse(data) {
+            const extras = {
+                quickActions: data.quick_actions,
+                products: data.products,
+                orderInfo: data.order_info
+            };
+            
+            addMessage('bot', data.reply, extras);
+        }
+        
+        // Handle form submission
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            sendMessage(message, showThinkingEnabled);
+        });
+    </script>
+</body>
+</html>

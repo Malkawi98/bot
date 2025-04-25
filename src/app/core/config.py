@@ -106,6 +106,7 @@ class Settings(AppSettings, PostgresSettings, CryptSettings, FirstUserSettings, 
     MILVUS_URI: str = os.getenv("MILVUS_URI", "")
     MILVUS_API_KEY: str = os.getenv("MILVUS_API_KEY", "")
     MILVUS_DIMENSION: int = 3072
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 
 
 settings = Settings()

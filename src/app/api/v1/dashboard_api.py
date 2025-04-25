@@ -230,8 +230,25 @@ async def get_vector_store_entries(query: str = "", top_k: int = 10):
     """Get entries from the vector store based on a search query"""
     try:
         if not query.strip():
-            # Return empty list if no query is provided
-            return []
+            # Return all entries if no query is provided
+            from app.services.milvus_client import get_all_entries
+            all_entries = get_all_entries(limit=top_k)
+            
+            # Format the results
+            entries = []
+            for i, entry in enumerate(all_entries):
+                formatted_entry = {
+                    "id": f"vs-{entry.get('id', i)}",
+                    "title": entry.get('text', '')[:50] + "...",  # Use first 50 chars as title
+                    "content": entry.get('text', ''),
+                    "similarity": 1.0,  # Default similarity for non-search results
+                    "tags": ["vector-store"],
+                    "created_at": datetime.now().isoformat(),
+                    "updated_at": datetime.now().isoformat()
+                }
+                entries.append(formatted_entry)
+            
+            return entries
         
         # Use the RAG service to search for similar entries
         results = rag_service.search_similar(query, top_k=top_k)
@@ -253,6 +270,93 @@ async def get_vector_store_entries(query: str = "", top_k: int = 10):
         return entries
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error searching vector store: {str(e)}")
+
+@router.get("/vector-store/status", response_model=Dict[str, Any])
+async def check_vector_store_status():
+    """Check the status of the vector store connection"""
+    try:
+        from app.services.milvus_client import list_collections, connect_to_milvus, COLLECTION_NAME, MILVUS_HOST, MILVUS_PORT
+        
+        # Get connection details
+        host = os.getenv("MILVUS_HOST") or MILVUS_HOST
+        port = os.getenv("MILVUS_PORT") or MILVUS_PORT
+        
+        # Try to connect to Milvus
+        try:
+            connect_to_milvus()
+            connection_status = "connected"
+        except Exception as e:
+            connection_status = f"error: {str(e)}"
+        
+        # Get list of collections
+        try:
+            collections = list_collections()
+        except Exception as e:
+            collections = [f"Error listing collections: {str(e)}"]
+        
+        return {
+            "success": True,
+            "connection": {
+                "status": connection_status,
+                "host": host,
+                "port": port
+            },
+            "collections": collections,
+            "target_collection": COLLECTION_NAME,
+            "collection_exists": COLLECTION_NAME in collections if isinstance(collections, list) else False
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@router.get("/vector-store/all", response_model=Dict[str, Any])
+async def get_all_vector_store_entries(limit: int = 100):
+    """Get all entries from the vector store"""
+    try:
+        print("Fetching all vector store entries...")
+        from app.services.milvus_client import get_all_entries, list_collections, COLLECTION_NAME
+        
+        # Check if collection exists
+        collections = list_collections()
+        print(f"Available collections: {collections}")
+        
+        # Return empty result if collection doesn't exist
+        if COLLECTION_NAME not in collections:
+            print(f"Collection {COLLECTION_NAME} not found")
+            return {
+                "success": True,
+                "count": 0,
+                "entries": [],
+                "message": f"Collection {COLLECTION_NAME} not found"
+            }
+        
+        # Get entries from Milvus
+        all_entries = get_all_entries(limit=limit)
+        print(f"Retrieved {len(all_entries)} entries from Milvus")
+        
+        # Format the results
+        entries = []
+        for i, entry in enumerate(all_entries):
+            print(f"Processing entry {i}: {entry}")
+            formatted_entry = {
+                "id": f"vs-{entry.get('id', i)}",
+                "title": entry.get('text', '')[:50] + "...",  # Use first 50 chars as title
+                "content": entry.get('text', ''),
+                "tags": ["vector-store"],
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }
+            entries.append(formatted_entry)
+        
+        return {
+            "success": True,
+            "count": len(entries),
+            "entries": entries
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting all vector store entries: {str(e)}")
 
 @router.post("/vector-store/add", response_model=Dict[str, Any])
 async def add_to_vector_store(content: Dict[str, str]):

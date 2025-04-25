@@ -8,9 +8,11 @@ import json
 from pathlib import Path
 import uuid
 from datetime import datetime
+from sqlalchemy.orm import Session
 
 # Import bot settings utility
-from app.core.bot_settings import get_bot_settings, save_bot_settings, update_bot_settings
+from app.core.bot_settings import get_bot_settings, save_bot_settings, update_bot_settings, get_bot_settings_model
+from app.core.db.database import get_db
 
 # Setup templates
 templates_dir = Path(__file__).resolve().parent.parent.parent / "templates"
@@ -18,40 +20,38 @@ templates = Jinja2Templates(directory=str(templates_dir))
 
 router = APIRouter(tags=["dashboard"])
 
-# Bot configuration data
+# Bot configuration data is now loaded dynamically from the database in each endpoint
 
-# Use bot settings utility to get bot configuration
-bot_settings = get_bot_settings()
-
-# Format bot settings to match the expected structure in the UI
-bot_config = {
-    "basic": {
-        "bot_name": bot_settings.get("bot_name", "E-Commerce Support Bot"),
-        "welcome_message": bot_settings.get("welcome_message", "Hello! I'm your support assistant. How can I help you today?"),
-        "fallback_message": bot_settings.get("fallback_message", "I'm sorry, I couldn't understand your request. Could you please rephrase or select one of the quick options below?"),
-        "quick_actions": bot_settings.get("quick_actions", [
-            {"label": "Track Order", "value": "Track my order"},
-            {"label": "Return Item", "value": "I want to return an item"},
-            {"label": "Talk to Human", "value": "I want to talk to a human agent"}
-        ])
-    },
-    "advanced": bot_settings.get("advanced_settings", {
-        "session_timeout": 30,
-        "max_conversation_turns": 20,
-        "features": {
-            "product_recommendations": True,
-            "order_tracking": True,
-            "returns_processing": True,
-            "collect_feedback": True,
-            "human_handoff": True
+# Helper function to format bot settings for the UI
+def format_bot_config(db_settings):
+    return {
+        "basic": {
+            "bot_name": db_settings.bot_name,
+            "welcome_message": db_settings.welcome_message,
+            "fallback_message": db_settings.fallback_message,
+            "quick_actions": db_settings.quick_actions or [
+                {"label": "Track Order", "value": "Track my order"},
+                {"label": "Return Item", "value": "I want to return an item"},
+                {"label": "Talk to Human", "value": "I want to talk to a human agent"}
+            ]
+        },
+        "advanced": db_settings.advanced_settings or {
+            "session_timeout": 30,
+            "max_conversation_turns": 20,
+            "features": {
+                "product_recommendations": True,
+                "order_tracking": True,
+                "returns_processing": True,
+                "collect_feedback": True,
+                "human_handoff": True
+            }
+        },
+        "appearance": {
+            "primary_color": "#0d6efd",
+            "chat_position": "Bottom Right",
+            "avatar_url": "https://ui-avatars.com/api/?name=Bot&background=0D8ABC&color=fff"
         }
-    }),
-    "appearance": {
-        "primary_color": "#0d6efd",
-        "chat_position": "Bottom Right",
-        "avatar_url": "https://ui-avatars.com/api/?name=Bot&background=0D8ABC&color=fff"
     }
-}
 
 # Mock data for knowledge base
 mock_knowledge_sources = [
@@ -95,7 +95,7 @@ mock_product_entries = [
     },
     {
         "name": "Smart Watch",
-        "content": "Our smart watch tracks fitness activities, heart rate, and sleep patterns. It has a battery life of up to 7 days and is compatible with both iOS and Android devices. The watch is water-resistant up to 50 meters.",
+        "content": "patterns. It has a battery life of up to 7 days and is compatible with both iOS and Android devices. The watch is water-resistant up to 50 meters.",
         "tags": ["watch", "fitness", "wearable"]
     },
     {
@@ -134,13 +134,19 @@ async def dashboard(request: Request):
     return RedirectResponse(url="/bot-config")
 
 @router.get("/bot-config", response_class=HTMLResponse)
-async def bot_config(request: Request):
+async def bot_config(request: Request, db: Session = Depends(get_db)):
     """
     Bot configuration page
     """
+    # Get bot settings from database
+    db_settings = get_bot_settings_model(db)
+    
+    # Format settings for UI
+    bot_config = format_bot_config(db_settings)
+    
     return templates.TemplateResponse("bot_config.html", {
         "request": request,
-        "config": bot_config
+        "bot_config": bot_config
     })
 
 @router.get("/knowledge-base", response_class=HTMLResponse)
@@ -148,18 +154,62 @@ async def knowledge_base(request: Request):
     """
     Knowledge base management page
     """
+    # Import the functions from the milvus_client module
+    from app.services.milvus_client import connect_to_milvus, get_all_entries
+    
+    try:
+        # First try to connect to Milvus
+        connect_to_milvus()
+        
+        # Fetch real entries from Milvus vector store
+        vector_entries = get_all_entries()
+        
+        # Format the entries for the template
+        formatted_entries = []
+        for entry in vector_entries:
+            # Extract the text content
+            content = entry.get("text", "")
+            # Generate a title from the first 30 characters of content
+            title = content[:30] + "..." if len(content) > 30 else content
+            
+            formatted_entries.append({
+                "name": title,
+                "content": content,
+                "tags": ["vector-store"]
+            })
+        
+        # If no entries found, use mock data as fallback
+        if not formatted_entries:
+            print("No entries found in vector store, using mock data as fallback")
+            formatted_entries = mock_product_entries
+        else:
+            print(f"Found {len(formatted_entries)} entries in vector store")
+    except Exception as e:
+        # If there's an error fetching from Milvus, use mock data as fallback
+        import traceback
+        print(f"Error fetching from vector store: {e}\n{traceback.format_exc()}")
+        print("Using mock data as fallback")
+        formatted_entries = mock_product_entries
+    
     return templates.TemplateResponse("knowledge_base.html", {
         "request": request,
         "sources": mock_knowledge_sources,
-        "entries": mock_product_entries
+        "entries": formatted_entries
     })
 
-@router.get("/chat-test", response_class=HTMLResponse)
+@router.get("/chat-test")
 async def chat_test(request: Request):
     """
-    Chat testing interface
+    Redirect to LangGraph chat testing interface
     """
-    return templates.TemplateResponse("chat_test.html", {
+    return RedirectResponse(url="/langgraph-chat-test", status_code=status.HTTP_301_MOVED_PERMANENTLY)
+
+@router.get("/langgraph-chat-test", response_class=HTMLResponse)
+async def langgraph_chat_test(request: Request):
+    """
+    LangGraph chat testing interface
+    """
+    return templates.TemplateResponse("langgraph_chat_test.html", {
         "request": request,
         "config": bot_config
     })
@@ -216,30 +266,38 @@ class BotConfigUpdateRequest(BaseModel):
     appearance: Optional[Dict[str, Any]] = None
 
 @router.post("/api/dashboard/bot-config")
-async def update_bot_config(config: BotConfigUpdateRequest):
+async def update_bot_config(config: BotConfigUpdateRequest, db: Session = Depends(get_db)):
     """
     Update bot configuration
     """
-    # Update the bot configuration in memory
+    # Get current settings from database
+    db_settings = get_bot_settings_model(db)
+    
+    # Prepare updated settings
+    bot_name = None
+    welcome_message = None
+    fallback_message = None
+    quick_actions = None
+    advanced_settings = None
+    
     if config.basic:
-        bot_config["basic"].update(config.basic)
+        bot_name = config.basic.get("bot_name")
+        welcome_message = config.basic.get("welcome_message")
+        fallback_message = config.basic.get("fallback_message")
+        quick_actions = config.basic.get("quick_actions")
+    
     if config.advanced:
-        bot_config["advanced"].update(config.advanced)
-    if config.appearance:
-        bot_config["appearance"].update(config.appearance)
+        advanced_settings = config.advanced
     
-    # Save the updated configuration to the JSON file
-    updated_settings = {
-        "bot_name": bot_config["basic"]["bot_name"],
-        "welcome_message": bot_config["basic"]["welcome_message"],
-        "fallback_message": bot_config["basic"]["fallback_message"],
-        "quick_actions": bot_config["basic"]["quick_actions"],
-        "advanced_settings": bot_config["advanced"],
-        "appearance": bot_config["appearance"]
-    }
-    
-    # Save to the JSON file
-    success = save_bot_settings(updated_settings)
+    # Update settings in database
+    success = update_bot_settings(
+        bot_name=bot_name,
+        welcome_message=welcome_message,
+        fallback_message=fallback_message,
+        quick_actions=quick_actions,
+        advanced_settings=advanced_settings,
+        db=db
+    )
     
     if success:
         return {"status": "success", "message": "Bot configuration updated successfully"}

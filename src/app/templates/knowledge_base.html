@@ -30,8 +30,8 @@
                 <a href="/knowledge-base" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg sidebar-active">
                     <i class="fas fa-book mr-3"></i>Knowledge Base
                 </a>
-                <a href="/chat-test" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
-                    <i class="fas fa-comments mr-3"></i>Chat Test
+                <a href="/langgraph-chat-test" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+                    <i class="fas fa-project-diagram mr-3"></i>LangGraph Chat
                 </a>
                 <a href="/" class="flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg mt-10">
                     <i class="fas fa-home mr-3"></i>Back to Home
@@ -58,114 +58,101 @@
             <div id="knowledge-content" class="container mx-auto px-4 py-6">
                 <h1 class="text-2xl font-semibold text-gray-800 mb-6">Knowledge Base Management</h1>
                 
-                <!-- Vector Store Search Section -->
-                <div id="vector-search-section" class="bg-white rounded-lg shadow-md p-6 mb-6 hidden">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Vector Store Search</h2>
-                    <div class="mb-4">
-                        <div class="flex">
-                            <input id="vector-search-input" class="shadow appearance-none border rounded-l w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" type="text" placeholder="Search the vector store...">
-                            <button id="execute-search-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-r focus:outline-none focus:shadow-outline">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div id="vector-search-results" class="mt-4 space-y-4">
-                        <!-- Search results will be displayed here -->
-                    </div>
-                    <div class="mt-6">
-                        <h3 class="font-semibold text-gray-700 mb-2">Add New Content to Vector Store</h3>
-                        <textarea id="vector-content-input" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" rows="4" placeholder="Enter content to add to the vector store..."></textarea>
-                        <button id="add-to-vector-store-btn" class="mt-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                            <i class="fas fa-plus mr-1"></i> Add to Vector Store
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Left Column: Vector Store Entries -->
-                    <div>
-                        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-                            <div class="flex justify-between items-center mb-4">
-                                <h2 class="text-xl font-semibold">Knowledge Entries</h2>
-
+                <!-- Main content in a single column layout -->
+                <div class="grid grid-cols-1 gap-6">
+                    <!-- Import knowledge section (at the top) -->
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h2 class="text-xl font-semibold mb-4">Import Knowledge</h2>
+                        
+                        <!-- Import from URL -->
+                        <div class="mb-6">
+                            <h3 class="font-medium text-gray-700 mb-2">Import from URL</h3>
+                            <div class="flex">
+                                <input type="text" id="import-url" placeholder="https://example.com/docs" class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <button id="import-url-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r-lg">
+                                    Import
+                                </button>
                             </div>
-                            <div id="knowledge-entries-list" class="max-h-96 overflow-y-auto">
-                                <!-- Vector store entries will be loaded here -->
-                                <div id="knowledge-entries-loading" class="text-center py-4 text-gray-500">
-                                    <i class="fas fa-spinner fa-spin mr-2"></i> Loading knowledge entries...
-                                </div>
-                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Imported content will be automatically added to the vector store.</p>
                         </div>
                         
-                        <div class="bg-white rounded-lg shadow-md p-6">
-                            <h2 class="text-xl font-semibold mb-4">Import Knowledge</h2>
-                            <form id="import-form">
-                                <div class="mb-4">
-                                    <label class="block text-gray-700 text-sm font-bold mb-2">
-                                        Import From URL
-                                    </label>
-                                    <div class="flex">
-                                        <input type="url" id="import-url" placeholder="https://example.com/docs" class="shadow appearance-none border rounded-l-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                                        <button type="button" id="import-url-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-r-lg">
-                                            Import
-                                        </button>
+                        <!-- Upload file -->
+                        <div>
+                            <h3 class="font-medium text-gray-700 mb-2">Upload File</h3>
+                            <div id="file-drop-area" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+                                <input type="file" id="file-upload" class="hidden">
+                                <label for="file-upload" class="cursor-pointer">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <i class="fas fa-cloud-upload-alt text-gray-400 text-3xl mb-2"></i>
+                                        <p class="text-gray-700 mb-1">Drag & drop a file here, or click to browse</p>
+                                        <p class="text-xs text-gray-500">Supported formats: PDF, DOCX, TXT, MD, CSV</p>
                                     </div>
-                                    <p class="text-sm text-gray-600 mt-1">Imported content will be automatically added to the vector store.</p>
-                                </div>
-                                
-                                <div class="mb-4">
-                                    <label class="block text-gray-700 text-sm font-bold mb-2">
-                                        Upload File
-                                    </label>
-                                    <div class="flex items-center justify-center w-full">
-                                        <label for="file-upload" class="flex flex-col w-full h-32 border-2 border-dashed border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                            <div class="flex flex-col items-center justify-center pt-7">
-                                                <i class="fas fa-cloud-upload-alt text-gray-400 text-3xl"></i>
-                                                <p class="pt-1 text-sm text-gray-500">Drag & drop files here or click to browse</p>
-                                                <p class="text-xs text-gray-400">Supports: PDF, DOCX, TXT, MD, CSV</p>
-                                            </div>
-                                            <input id="file-upload" type="file" class="hidden" accept=".pdf,.docx,.txt,.md,.csv">
-                                        </label>
-                                    </div>
-                                    <div id="file-name" class="mt-2 text-sm text-gray-500 hidden"></div>
-                                </div>
-                                
-                                <div class="flex items-center justify-end">
-                                    <button type="button" id="process-import-btn" class="bg-teal-500 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                                        Process & Import
-                                    </button>
-                                </div>
-                            </form>
+                                </label>
+                                <p id="file-name" class="mt-2 text-sm text-blue-600 hidden"></p>
+                                <button id="upload-file-btn" class="mt-3 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg hidden">
+                                    Upload
+                                </button>
+                            </div>
                         </div>
                     </div>
                     
-                    <!-- Middle Column: Knowledge Entries -->
-                    <div class="col-span-2">
-                        <div class="bg-white rounded-lg shadow-md p-6">
-                            <div class="flex justify-between items-center mb-4">
-                                <h2 id="knowledge-editor-title" class="text-xl font-semibold">Knowledge Editor: Select a Source</h2>
-                                <div class="flex space-x-2">
-                                    <button id="add-entry-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm" disabled>
-                                        <i class="fas fa-plus mr-1"></i> Add Entry
-                                    </button>
-                                    <button id="save-all-btn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm" disabled>
-                                        <i class="fas fa-save mr-1"></i> Save All
-                                    </button>
+                    <!-- Knowledge entries section (below import) -->
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h2 class="text-xl font-semibold mb-4">Knowledge Entries</h2>
+                        
+                        <!-- Knowledge entries list -->
+                        <div id="knowledge-entries-list" class="space-y-4">
+                            {% if entries and entries|length > 0 %}
+                                <div class="text-sm text-gray-600 mb-3">Total entries: {{ entries|length }}</div>
+                                
+                                {% for entry in entries %}
+                                    <div class="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow mb-3">
+                                        <div class="flex justify-between items-start">
+                                            <h3 class="font-semibold text-lg">{{ entry.name }}</h3>
+                                        </div>
+                                        <div class="mt-2">
+                                            <p class="text-gray-700">{{ entry.content }}</p>
+                                        </div>
+                                        <div class="mt-3 flex flex-wrap gap-1">
+                                            {% for tag in entry.tags %}
+                                                <span class="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full">{{ tag }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-6 bg-gray-50 rounded-lg border border-gray-200">
+                                    <i class="fas fa-database text-gray-400 text-3xl mb-2"></i>
+                                    <h3 class="text-lg font-semibold text-gray-700 mb-2">No entries found in the vector store</h3>
+                                    <p class="text-gray-600 mb-4">Your knowledge base appears to be empty. Add some content to get started.</p>
                                 </div>
-                            </div>
-                            
-                            <div class="mb-4">
-                                <input id="entry-search" type="text" placeholder="Search entries..." class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-                            
-                            <div id="entries-container" class="space-y-6">
-                                <!-- Knowledge entries will be loaded dynamically -->
-                                <div class="text-center py-8 text-gray-500">
-                                    Select a knowledge source to view entries
-                                </div>
-                            </div>
+                            {% endif %}
                         </div>
                     </div>
+                    
+                    <!-- Vector Store Search Section (hidden by default) -->
+                    <div id="vector-search-section" class="bg-white rounded-lg shadow-md p-6 hidden">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Vector Store Search</h2>
+                        <div class="mb-4">
+                            <div class="flex">
+                                <input id="vector-search-input" class="shadow appearance-none border rounded-l w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" type="text" placeholder="Search the vector store...">
+                                <button id="execute-search-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-r focus:outline-none focus:shadow-outline">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="vector-search-results" class="mt-4 space-y-4">
+                            <!-- Search results will be displayed here -->
+                        </div>
+                        <div class="mt-6">
+                            <h3 class="font-semibold text-gray-700 mb-2">Add New Content to Vector Store</h3>
+                            <textarea id="vector-content-input" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" rows="4" placeholder="Enter content to add to the vector store..."></textarea>
+                            <button id="add-to-vector-store-btn" class="mt-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                                <i class="fas fa-plus mr-1"></i> Add to Vector Store
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 </div>
             </div>
         </div>
@@ -414,6 +401,57 @@
                 const fileNameDiv = document.getElementById('file-name');
                 fileNameDiv.textContent = `Selected file: ${file.name}`;
                 fileNameDiv.classList.remove('hidden');
+                
+                // Show the upload button when a file is selected
+                document.getElementById('upload-file-btn').classList.remove('hidden');
+            }
+        });
+        
+        // Upload file button handling
+        document.getElementById('upload-file-btn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('file-upload');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showNotification('Please select a file to upload', 'error');
+                return;
+            }
+            
+            // Show loading state
+            const uploadBtn = document.getElementById('upload-file-btn');
+            const originalUploadText = uploadBtn.innerHTML;
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Uploading...';
+            uploadBtn.disabled = true;
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                // Upload the file to the server
+                const response = await fetch('/api/v1/vector-store/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showNotification('File uploaded successfully!', 'success');
+                    // Reset the file input
+                    fileInput.value = '';
+                    document.getElementById('file-name').classList.add('hidden');
+                    // Reload vector store entries to show the new content
+                    loadVectorStoreEntries();
+                } else {
+                    showNotification(`Error uploading file: ${data.detail || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                showNotification(`Error uploading file: ${error.message}`, 'error');
+            } finally {
+                // Reset button state
+                uploadBtn.innerHTML = originalUploadText;
+                uploadBtn.disabled = false;
             }
         });
         
@@ -781,7 +819,413 @@
             }
         });
         
-        // Load knowledge sources on page load
+        // Initialize knowledge sources on page load
+        async function loadKnowledgeSources() {
+            console.log('Initializing knowledge sources...');
+            // No need to load entries via AJAX as they are already rendered server-side
+            
+            // Set up event listeners for the import forms and other UI elements
+            setupEventListeners();
+        }
+        
+        // Set up event listeners for the UI elements
+        function setupEventListeners() {
+            // Set up event listeners for the import URL form
+            document.getElementById('import-url-btn').addEventListener('click', async () => {
+                const urlInput = document.getElementById('import-url');
+                const url = urlInput.value.trim();
+                
+                if (!url) {
+                    showNotification('Please enter a valid URL', 'error');
+                    return;
+                }
+                
+                try {
+                    // Show loading state
+                    const importBtn = document.getElementById('import-url-btn');
+                    const originalBtnText = importBtn.innerHTML;
+                    importBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+                    importBtn.disabled = true;
+                    
+                    // Create form data
+                    const formData = new FormData();
+                    formData.append('url', url);
+                    
+                    // Call the RAG context API
+                    const response = await fetch('/api/v1/rag/context', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to import URL');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Reset button
+                    importBtn.innerHTML = originalBtnText;
+                    importBtn.disabled = false;
+                    
+                    // Show success message
+                    showNotification('URL imported successfully!');
+                    urlInput.value = '';
+                    
+                    // Show refresh prompt
+                    showRefreshPrompt();
+                    
+                } catch (error) {
+                    console.error('Error importing URL:', error);
+                    showNotification('Error importing URL: ' + error.message, 'error');
+                    
+                    // Reset button state
+                    const importBtn = document.getElementById('import-url-btn');
+                    importBtn.innerHTML = 'Import';
+                    importBtn.disabled = false;
+                }
+            });
+            
+            // Set up event listeners for the file upload form
+            const fileInput = document.getElementById('file-upload');
+            const fileDropArea = document.getElementById('file-drop-area');
+            const fileNameDisplay = document.getElementById('file-name');
+            const uploadBtn = document.getElementById('upload-file-btn');
+            
+            // File selection event
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length > 0) {
+                    const fileName = fileInput.files[0].name;
+                    fileNameDisplay.textContent = fileName;
+                    fileNameDisplay.classList.remove('hidden');
+                    uploadBtn.classList.remove('hidden');
+                } else {
+                    fileNameDisplay.classList.add('hidden');
+                    uploadBtn.classList.add('hidden');
+                }
+            });
+            
+            // File upload button click event
+            uploadBtn.addEventListener('click', async () => {
+                if (!fileInput.files.length) {
+                    showNotification('Please select a file to upload', 'error');
+                    return;
+                }
+                
+                const file = fileInput.files[0];
+                
+                // Check file extension
+                const fileExt = file.name.split('.').pop().toLowerCase();
+                const allowedExtensions = ['pdf', 'docx', 'txt', 'md', 'csv'];
+                
+                if (!allowedExtensions.includes(fileExt)) {
+                    showNotification(`Unsupported file format. Allowed formats: ${allowedExtensions.join(', ')}`, 'error');
+                    return;
+                }
+                
+                try {
+                    // Show loading state
+                    const originalText = uploadBtn.innerHTML;
+                    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+                    uploadBtn.disabled = true;
+                    
+                    // Create form data
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    // Call the vector store upload API
+                    const response = await fetch('/api/v1/vector-store/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to upload file');
+                    }
+                    
+                    const result = await response.json();
+                    
+                    // Show success message
+                    showNotification('File uploaded successfully!');
+                    
+                    // Reset form
+                    fileInput.value = '';
+                    fileNameDisplay.classList.add('hidden');
+                    uploadBtn.classList.add('hidden');
+                    
+                    // Show refresh prompt
+                    showRefreshPrompt();
+                    
+                } catch (error) {
+                    console.error('Error uploading file:', error);
+                    showNotification('Error uploading file: ' + error.message, 'error');
+                } finally {
+                    // Restore button state
+                    uploadBtn.innerHTML = 'Upload';
+                    uploadBtn.disabled = false;
+                }
+            });
+            
+            // Drag and drop events
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                fileDropArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                fileDropArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                fileDropArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                fileDropArea.classList.add('border-blue-500', 'bg-blue-50');
+            }
+            
+            function unhighlight() {
+                fileDropArea.classList.remove('border-blue-500', 'bg-blue-50');
+            }
+            
+            fileDropArea.addEventListener('drop', handleDrop, false);
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files.length) {
+                    fileInput.files = files;
+                    const event = new Event('change');
+                    fileInput.dispatchEvent(event);
+                }
+            }
+        }
+        
+        // Check Milvus connection status
+        async function checkMilvusStatus() {
+            const entriesContainer = document.getElementById('knowledge-entries-list');
+            const loadingElement = document.getElementById('knowledge-entries-loading');
+            
+            try {
+                console.log('Checking Milvus connection status...');
+                const response = await fetch('/api/v1/vector-store/status');
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to check Milvus status: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Milvus status:', data);
+                
+                // If Milvus is not connected, show error message
+                if (data.connection.status !== 'connected') {
+                    if (loadingElement) {
+                        loadingElement.innerHTML = `
+                            <div class="text-center py-6 bg-red-50 rounded-lg border border-red-200">
+                                <i class="fas fa-database text-red-400 text-3xl mb-2"></i>
+                                <h3 class="text-lg font-semibold text-red-700 mb-2">Vector Database Connection Error</h3>
+                                <p class="text-red-600 mb-2">Cannot connect to Milvus at ${data.connection.host}:${data.connection.port}</p>
+                                <p class="text-red-600 mb-4">${data.connection.status}</p>
+                                <div class="text-sm text-gray-600 mb-4 bg-gray-100 p-3 rounded">
+                                    <p class="font-semibold">Troubleshooting:</p>
+                                    <ul class="list-disc list-inside">
+                                        <li>Check if Milvus is running</li>
+                                        <li>Verify environment variables (MILVUS_HOST, MILVUS_PORT)</li>
+                                        <li>Check network connectivity</li>
+                                    </ul>
+                                </div>
+                                <div class="flex justify-center">
+                                    <button id="retry-connection-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                                        <i class="fas fa-sync-alt mr-1"></i> Retry Connection
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Add event listener for retry button
+                        document.getElementById('retry-connection-btn').addEventListener('click', checkMilvusStatus);
+                        
+                        // Return false to indicate connection error
+                        return false;
+                    }
+                }
+                
+                // If collection doesn't exist, show message
+                if (!data.collection_exists) {
+                    console.log(`Collection ${data.target_collection} does not exist, will be created when adding content`);
+                }
+                
+                // Return true to indicate successful connection
+                return true;
+                
+            } catch (error) {
+                console.error('Error checking Milvus status:', error);
+                
+                if (loadingElement) {
+                    loadingElement.innerHTML = `
+                        <div class="text-center py-6 bg-red-50 rounded-lg border border-red-200">
+                            <i class="fas fa-exclamation-triangle text-red-400 text-3xl mb-2"></i>
+                            <h3 class="text-lg font-semibold text-red-700 mb-2">Connection Check Failed</h3>
+                            <p class="text-red-600 mb-4">${error.message}</p>
+                            <div class="flex justify-center">
+                                <button id="retry-connection-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                                    <i class="fas fa-sync-alt mr-1"></i> Retry
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Add event listener for retry button
+                    document.getElementById('retry-connection-btn').addEventListener('click', checkMilvusStatus);
+                }
+                
+                // Return false to indicate connection error
+                return false;
+            }
+        }
+        
+        // Function to show a refresh button when new data is added
+        function showRefreshPrompt() {
+            const entriesContainer = document.getElementById('knowledge-entries-list');
+            const refreshPrompt = document.createElement('div');
+            refreshPrompt.className = 'bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4 text-center';
+            refreshPrompt.innerHTML = `
+                <p class="text-blue-700 mb-2">New data has been added to the knowledge base!</p>
+                <button id="refresh-page-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    <i class="fas fa-sync-alt mr-1"></i> Refresh Page to See Updates
+                </button>
+            `;
+            
+            // Insert at the top of the entries container
+            entriesContainer.insertBefore(refreshPrompt, entriesContainer.firstChild);
+            
+            // Add event listener for the refresh button
+            document.getElementById('refresh-page-btn').addEventListener('click', () => {
+                window.location.reload();
+            });
+        }
+        
+        // Function to show mock data when Milvus is not available
+        function showMockData() {
+            const entriesContainer = document.getElementById('knowledge-entries-list');
+            const loadingElement = document.getElementById('knowledge-entries-loading');
+            
+            // Remove loading indicator if it exists
+            if (loadingElement) {
+                loadingElement.remove();
+            }
+            
+            // Create mock data
+            const mockData = [
+                {
+                    id: 'mock-1',
+                    title: 'Returns Policy',
+                    content: 'E-commerce returns policy: Customers can return items within 30 days of purchase for a full refund. Items must be in original condition with tags attached. Return shipping is free for defective items.',
+                    tags: ['policy', 'returns', 'mock-data']
+                },
+                {
+                    id: 'mock-2',
+                    title: 'Shipping Information',
+                    content: 'Standard shipping takes 3-5 business days. Express shipping is available for an additional fee and delivers within 1-2 business days. International shipping may take 7-14 business days.',
+                    tags: ['shipping', 'delivery', 'mock-data']
+                },
+                {
+                    id: 'mock-3',
+                    title: 'Product Warranty',
+                    content: 'All electronics come with a 1-year manufacturer warranty covering defects in materials and workmanship. Extended warranties are available for purchase separately.',
+                    tags: ['warranty', 'support', 'mock-data']
+                },
+                {
+                    id: 'mock-4',
+                    title: 'Payment Methods',
+                    content: 'We accept Visa, Mastercard, American Express, PayPal, and Apple Pay. All transactions are secure and encrypted. Gift cards are also available for purchase.',
+                    tags: ['payment', 'checkout', 'mock-data']
+                },
+                {
+                    id: 'mock-5',
+                    title: 'Customer Support Hours',
+                    content: 'Our support team is available Monday-Friday 9am-6pm EST. Weekend support is available via email only. For urgent matters, please call our 24/7 hotline.',
+                    tags: ['support', 'contact', 'mock-data']
+                }
+            ];
+            
+            // Display mock data with a notice
+            entriesContainer.innerHTML = `
+                <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
+                    <div class="flex">
+                        <div class="py-1"><i class="fas fa-exclamation-triangle text-yellow-500 mr-3"></i></div>
+                        <div>
+                            <p class="font-bold">Development Mode</p>
+                            <p>Showing mock data because Milvus vector database is not available. This data is not persisted.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-600 mb-3">Total entries: ${mockData.length} (mock data)</div>
+            `;
+            
+            // Add each mock entry
+            mockData.forEach((entry) => {
+                const entryElement = document.createElement('div');
+                entryElement.className = 'bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow mb-3';
+                
+                entryElement.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-semibold text-lg">${entry.title}</h3>
+                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Mock Data</span>
+                    </div>
+                    <div class="mt-2">
+                        <p class="text-gray-700">${entry.content}</p>
+                    </div>
+                    <div class="mt-3 flex flex-wrap gap-1">
+                        ${entry.tags.map(tag => `<span class="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full">${tag}</span>`).join('')}
+                    </div>
+                `;
+                
+                entriesContainer.appendChild(entryElement);
+            });
+            
+            showNotification('Showing mock data for development purposes', 'success');
+        }
+        
+        // Function to add sample data to the vector store
+        async function addSampleData() {
+            try {
+                showNotification('Adding sample data to the knowledge base...', 'success');
+                
+                const sampleData = [
+                    "E-commerce returns policy: Customers can return items within 30 days of purchase for a full refund. Items must be in original condition with tags attached. Return shipping is free for defective items.",
+                    "Shipping information: Standard shipping takes 3-5 business days. Express shipping is available for an additional fee and delivers within 1-2 business days. International shipping may take 7-14 business days.",
+                    "Product warranty: All electronics come with a 1-year manufacturer warranty covering defects in materials and workmanship. Extended warranties are available for purchase separately.",
+                    "Payment methods: We accept Visa, Mastercard, American Express, PayPal, and Apple Pay. All transactions are secure and encrypted. Gift cards are also available for purchase.",
+                    "Customer support hours: Our support team is available Monday-Friday 9am-6pm EST. Weekend support is available via email only. For urgent matters, please call our 24/7 hotline."
+                ];
+                
+                // Add each sample data item to the vector store
+                for (const text of sampleData) {
+                    await fetch('/api/v1/vector-store/add', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ text })
+                    });
+                }
+                
+                showNotification('Sample data added successfully!', 'success');
+                
+                // Reload the vector store entries
+                loadVectorStoreEntries();
+                
+            } catch (error) {
+                console.error('Error adding sample data:', error);
+                showNotification('Error adding sample data: ' + error.message, 'error');
+            }
+        }
+        
         document.addEventListener('DOMContentLoaded', loadKnowledgeSources);
     </script>
 </body>

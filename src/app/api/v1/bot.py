@@ -1,14 +1,19 @@
-from fastapi import APIRouter, Request, Cookie, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response, status, Query, Request, Cookie
 from fastapi.responses import JSONResponse, HTMLResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from fastapi.templating import Jinja2Templates
 from uuid import uuid4
-from fastapi import Response
 import json
 import random
 from datetime import datetime, timedelta
 from app.services.rag import RAGService
+from app.services.graph_service.graph import graph_app
+from app.services.graph_service.state import ConversationState
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
+from app.core.bot_settings import get_bot_settings_model
+from app.core.db.database import get_db
+from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["bot"])
 
@@ -20,6 +25,9 @@ rag_service = RAGService()
 
 # In-memory session state (for demo only)
 session_states = {}
+
+# In-memory session store for LangGraph (for demo only)
+langraph_session_store: Dict[str, List[Dict]] = {}
 
 # In-memory product catalog (for demo only)
 product_catalog = {}
@@ -114,9 +122,28 @@ MOCK_PRODUCT_CATALOG = {
 }
 
 def get_session_id(session_id: str = Cookie(None)):
-    if not session_id:
+    """Manages or creates a session ID."""
+    if not session_id or session_id == "null": # Handle JS null cookie value
         session_id = str(uuid4())
+    print(f"Using session ID: {session_id}")
     return session_id
+
+def load_history(session_id: str) -> List[BaseMessage]:
+    """Loads history from store and converts to LangChain messages."""
+    history_dicts = langraph_session_store.get(session_id, [])
+    messages = []
+    for msg_dict in history_dicts:
+        if msg_dict.get("type") == "human":
+            messages.append(HumanMessage(content=msg_dict.get("content", "")))
+        elif msg_dict.get("type") == "ai":
+            messages.append(AIMessage(content=msg_dict.get("content", "")))
+    return messages
+
+def save_history(session_id: str, messages: List[BaseMessage]):
+    """Converts LangChain messages to dicts and saves to store."""
+    langraph_session_store[session_id] = [
+        {"type": msg.type, "content": msg.content} for msg in messages
+    ]
 
 class BotMessageRequest(BaseModel):
     message: str
@@ -148,80 +175,392 @@ class BotMessageResponse(BaseModel):
     order_info: Optional[OrderInfo] = None
     confidence_score: Optional[float] = None
     source: Optional[str] = None
+    thinking_process: Optional[List[Dict[str, Any]]] = None
 
 from app.services.bot_service import BotService
 
 # Initialize bot service
 bot_service = BotService()
 
-@router.post("/bot/message", response_model=BotMessageResponse)
-async def bot_message(request: BotMessageRequest, response: Response, session_id: str = Cookie(None)):
-    user_message = request.message
+@router.post("/bot", response_model=BotMessageResponse)
+async def bot_message(
+    request: BotMessageRequest,
+    response: Response,
+    session_id: str = Cookie(None),
+    db: Session = Depends(get_db)
+):
+    """Process a message sent to the bot and return a response"""
     
-    # Session state management
-    if not session_id or session_id not in session_states:
+    # Ensure we have a session ID
+    if not session_id:
         session_id = str(uuid4())
-        session_states[session_id] = {"count": 0, "history": []}
+        response.set_cookie(key="session_id", value=session_id, httponly=True, samesite="Lax", max_age=3600*24*7) # 1 week
     
-    state = session_states[session_id]
-    state["count"] += 1
+    # Get or initialize session state
+    if session_id not in session_states:
+        session_states[session_id] = {
+            "history": [],
+            "context": {}
+        }
     
-    # Set session cookie
-    response.set_cookie(key="session_id", value=session_id, httponly=True, samesite="lax")
+    # Add user message to history
+    session_states[session_id]["history"].append({
+        "role": "user",
+        "content": request.message
+    })
     
-    # Process the message using the bot service
-    reply, quick_actions_data, additional_data, confidence = bot_service.process_message(user_message, state)
+    # Process message
+    user_message = request.message.lower()
     
-    # Convert quick actions to the expected format
-    quick_actions = [QuickAction(label=qa["label"], value=qa["value"]) for qa in quick_actions_data] if quick_actions_data else None
+    # Get bot settings from database
+    bot_settings_model = get_bot_settings_model(db)
     
-    # Prepare the response
-    bot_response = BotMessageResponse(
+    # Simple intent detection
+    intent = "general"
+    if any(word in user_message for word in ["shipping", "delivery", "arrive"]):
+        intent = "shipping"
+    elif any(word in user_message for word in ["return", "refund", "money back"]):
+        intent = "return"
+    elif any(word in user_message for word in ["pay", "payment", "credit card", "debit"]):
+        intent = "payment"
+    elif any(word in user_message for word in ["warranty", "guarantee", "broken", "repair"]):
+        intent = "warranty"
+    elif any(word in user_message for word in ["price match", "cheaper", "discount", "coupon"]):
+        intent = "price_match"
+    elif any(word in user_message for word in ["bulk", "wholesale", "large order", "corporate"]):
+        intent = "bulk_orders"
+    elif any(word in user_message for word in ["membership", "premium", "subscribe", "subscription"]):
+        intent = "membership"
+    elif any(word in user_message for word in ["order", "status", "tracking"]):
+        intent = "order_status"
+    elif any(word in user_message for word in ["product", "item", "buy", "purchase"]):
+        intent = "product_info"
+    
+    # Generate response based on intent
+    reply = ""
+    quick_actions = []
+    products = None
+    order_info = None
+    
+    if intent in FAQS:
+        reply = FAQS[intent]
+    elif intent == "order_status":
+        # Mock order status
+        order_id = "ORD" + str(random.randint(10000, 99999))
+        status = random.choice(["processing", "shipped", "delivered", "cancelled"])
+        status_obj = next((s for s in ORDER_STATUSES if s["code"] == status), None)
+        
+        order_date = (datetime.now() - timedelta(days=random.randint(1, 10))).strftime("%B %d, %Y")
+        estimated_delivery = (datetime.now() + timedelta(days=random.randint(1, 5))).strftime("%B %d, %Y")
+        
+        reply = f"I found your order {order_id}. It is currently {status_obj['label']}. {status_obj['description']}"
+        
+        if status == "shipped":
+            reply += f" Your package should arrive by {estimated_delivery}."
+        
+        order_info = OrderInfo(
+            order_id=order_id,
+            status=status_obj["label"],
+            status_description=status_obj["description"],
+            tracking_number="TRK" + str(random.randint(10000, 99999)),
+            estimated_delivery=estimated_delivery if status == "shipped" else None
+        )
+    elif intent == "product_info":
+        # Extract product type from message
+        product_type = None
+        for key in MOCK_PRODUCT_CATALOG.keys():
+            if key in user_message:
+                product_type = key
+                break
+        
+        if product_type:
+            product = MOCK_PRODUCT_CATALOG[product_type]
+            reply = f"Here's information about our {product['name']}: {product['description']} It's priced at ${product['price']}."
+            
+            # Add related products
+            products = []
+            for p in PRODUCTS[:3]:  # Just show first 3 products
+                products.append(ProductInfo(
+                    id=p["id"],
+                    name=p["name"],
+                    price=p["price"],
+                    description=f"Our popular {p['name']} with {p['rating']} star rating"
+                ))
+        else:
+            reply = "We have a wide range of products. Here are some of our popular items:"
+            products = []
+            for p in PRODUCTS[:5]:  # Show first 5 products
+                products.append(ProductInfo(
+                    id=p["id"],
+                    name=p["name"],
+                    price=p["price"],
+                    description=f"Our popular {p['name']} with {p['rating']} star rating"
+                ))
+    else:
+        # Default response using database settings
+        reply = bot_settings_model.fallback_message
+    
+    # Add bot message to history
+    session_states[session_id]["history"].append({
+        "role": "assistant",
+        "content": reply
+    })
+    
+    # Add quick actions from database settings
+    if bot_settings_model.quick_actions:
+        quick_actions = [QuickAction(**qa) for qa in bot_settings_model.quick_actions]
+    
+    return BotMessageResponse(
         reply=reply,
         quick_actions=quick_actions,
-        confidence_score=confidence,
-        source="bot_service"
+        products=products,
+        order_info=order_info
     )
-    
-    # Add product information if available
-    if additional_data and "product_info" in additional_data:
-        product = additional_data["product_info"]
-        bot_response.products = [
-            ProductInfo(
-                id=product.get("id", "unknown"),
-                name=product["name"],
-                price=product["price"],
-                description=product["description"],
-                image_url=f"https://ui-avatars.com/api/?name={product['name']}&size=128"
-            )
-        ]
-    
-    # Add order information if available
-    if additional_data and "order_info" in additional_data:
-        order = additional_data["order_info"]
-        bot_response.order_info = OrderInfo(
-            order_id=order["order_id"],
-            status=order["status"],
-            status_description=order["status_description"],
-            tracking_number=order["tracking_number"],
-            estimated_delivery=order["estimated_delivery"]
-        )
-    
-    # Add recommended products if available
-    if additional_data and "recommended_products" in additional_data:
-        recommended = additional_data["recommended_products"]
-        bot_response.products = [
-            ProductInfo(
-                id=product.get("id", "unknown"),
-                name=product["name"],
-                price=product["price"],
-                description=f"Category: {product.get('category', 'General')}",
-                image_url=f"https://ui-avatars.com/api/?name={product['name']}&size=128"
-            ) for product in recommended
-        ]
-    
-    return bot_response
 
-@router.get("/customer-support-bot", response_class=HTMLResponse)
-async def customer_support_bot(request: Request):
-    return templates.TemplateResponse("customer_support_bot.html", {"request": request}) 
+@router.post("/v2/bot/message", response_model=BotMessageResponse)
+async def langgraph_bot_message(
+    request: BotMessageRequest,
+    response: Response,
+    session_id: str = Depends(get_session_id),
+    db: Session = Depends(get_db),
+    debug: bool = Query(False)
+):
+    """Handles bot messages using the LangGraph workflow."""
+    print(f"\n--- New Request --- Session: {session_id}, Message: {request.message}")
+    user_message = request.message
+
+    # 1. Load conversation history
+    history = load_history(session_id)
+    print(f"--- Loaded History ({len(history)} messages) ---")
+
+    # 2. Prepare initial state for the graph
+    initial_state: ConversationState = {
+        "messages": history,
+        "user_message": user_message,
+        "intent": None,
+        "retrieved_context": None,
+        "action_result": None,
+    }
+
+    # 3. Invoke the graph
+    final_state = None
+    thinking_process = []
+    
+    # Create a simpler approach to capture the thinking process
+    thinking_steps = []
+    
+    # Define a function to capture stdout
+    def capture_stdout(message):
+        thinking_steps.append({"type": "stdout", "content": message})
+        print(message)  # Also print to the real stdout
+    
+    # Monkey patch the print function in specific modules to capture thinking
+    original_print = print
+    
+    try:
+        print("--- Invoking Graph ---")
+        # Set up a custom print function to capture thinking process if debug is enabled
+        if debug:
+            def custom_print(*args, **kwargs):
+                message = ' '.join(str(arg) for arg in args)
+                thinking_steps.append({"type": "stdout", "content": message})
+                original_print(*args, **kwargs)
+            
+            # Patch the print function in relevant modules
+            import builtins
+            builtins.print = custom_print
+            
+            # Add a thinking step to mark the start of processing
+            thinking_steps.append({"type": "text", "content": f"Processing message: {user_message}"})
+            
+        # Execute the graph
+        final_state = await graph_app.ainvoke(initial_state)
+        
+        # Restore original print function if debug was enabled
+        if debug:
+            import builtins
+            builtins.print = original_print
+            
+            # Add thinking steps to the process
+            thinking_process.extend(thinking_steps)
+            
+        print("--- Graph Invocation Complete ---")
+
+    except Exception as e:
+        print(f"--- Graph Error: {e} ---")
+        # Handle graph execution error
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error processing message: {e}")
+
+    if not final_state or not final_state.get("messages"):
+        raise HTTPException(status_code=500, detail="Graph did not return expected state.")
+
+    # 4. Extract the final response
+    final_messages = final_state["messages"]
+    ai_reply = final_messages[-1].content if final_messages and isinstance(final_messages[-1], AIMessage) else "Sorry, I couldn't generate a response."
+
+    # 5. Save updated history
+    save_history(session_id, final_messages)
+    print(f"--- Saved History ({len(final_messages)} messages) ---")
+
+    # 6. Set session cookie
+    response.set_cookie(key="session_id", value=session_id, httponly=True, samesite="Lax", max_age=3600*24*7) # 1 week
+
+    # 7. Prepare quick actions based on intent
+    intent = final_state.get("intent")
+    quick_actions = None
+    if intent == "order_status":
+        quick_actions = [
+            QuickAction(label="Track Package", value="Track my package"),
+            QuickAction(label="Cancel Order", value="I want to cancel my order")
+        ]
+    elif intent == "knowledge_base_query":
+        quick_actions = [
+            QuickAction(label="Return Policy", value="What's your return policy?"),
+            QuickAction(label="Shipping Info", value="How long does shipping take?")
+        ]
+    elif intent == "product_availability":
+        quick_actions = [
+            QuickAction(label="Check Another Product", value="Is the smart watch in stock?"),
+            QuickAction(label="Compare Products", value="Compare wireless earbuds and headphones")
+        ]
+
+    # 8. Extract any product or order information from action_result
+    products = None
+    order_info = None
+    action_result = final_state.get("action_result")
+    
+    if action_result and "product_availability" in action_result:
+        product_data = action_result["product_availability"]
+        if isinstance(product_data, dict) and "product_name" in product_data:
+            products = [
+                ProductInfo(
+                    id=str(random.randint(1000, 9999)),  # Mock ID
+                    name=product_data["product_name"],
+                    price=next((p["price"] for p in PRODUCTS if p["name"] == product_data["product_name"]), 99.99),
+                    description=f"Availability: {product_data.get('availability', 'Unknown')}",
+                    image_url=f"https://ui-avatars.com/api/?name={product_data['product_name']}&size=128"
+                )
+            ]
+    
+    if action_result and "order_status" in action_result:
+        order_data = action_result["order_status"]
+        if isinstance(order_data, dict) and "order_id" in order_data:
+            order_info = OrderInfo(
+                order_id=order_data["order_id"],
+                status=order_data.get("status", "Unknown"),
+                status_description=f"Order placed on {order_data.get('order_date', 'unknown date')}",
+                tracking_number=f"TRK{random.randint(10000, 99999)}",
+                estimated_delivery=order_data.get("estimated_delivery")
+            )
+
+    # 9. Return response
+    return BotMessageResponse(
+        reply=ai_reply,
+        quick_actions=quick_actions,
+        products=products,
+        order_info=order_info,
+        confidence_score=0.95,  # Mock confidence score
+        source="langgraph",
+        thinking_process=thinking_process if debug else None
+    )
+
+@router.post("/v2/bot/test-knowledge", response_model=BotMessageResponse)
+async def test_knowledge_bot_message(
+    request: BotMessageRequest,
+    response: Response,
+    session_id: str = Depends(get_session_id),
+    db: Session = Depends(get_db)
+):
+    """Test endpoint that directly uses the vector store for knowledge retrieval."""
+    print(f"\n--- New Test Request --- Session: {session_id}, Message: {request.message}")
+    user_message = request.message
+
+    # 1. Load conversation history
+    history = load_history(session_id)
+    print(f"--- Loaded History ({len(history)} messages) ---")
+    
+    # 2. Get bot settings from database
+    bot_settings = get_bot_settings_model(db)
+    
+    # 3. Determine intent and retrieve context
+    intent = "general"
+    retrieved_context = None
+    action_result = None
+    rag_service = RAGService()
+    search_results = rag_service.search_similar(user_message, top_k=2)
+    
+    retrieved_context = None
+    intent = "knowledge_base_query"
+    
+    # Extract text from search results
+    texts = []
+    if search_results:
+        for result in search_results:
+            if isinstance(result, dict) and "text" in result:
+                texts.append(result["text"])
+                print(f"--- Found text result: {result['text'][:100]}... ---")
+    
+    # Combine texts into a single context
+    if texts:
+        retrieved_context = "\n\n".join(texts)
+        print(f"--- Retrieved context of length {len(retrieved_context)} ---")
+
+    # 3. Prepare initial state for the graph
+    initial_state: ConversationState = {
+        "messages": history,
+        "user_message": user_message,
+        "intent": intent,
+        "retrieved_context": retrieved_context,
+        "action_result": None,
+    }
+
+    # 4. Invoke the graph
+    final_state = None
+    try:
+        print("--- Invoking Graph ---")
+        final_state = await graph_app.ainvoke(initial_state)
+        print("--- Graph Invocation Complete ---")
+
+    except Exception as e:
+        print(f"--- Graph Error: {e} ---")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error processing message: {e}")
+
+    if not final_state or not final_state.get("messages"):
+        raise HTTPException(status_code=500, detail="Graph did not return expected state.")
+
+    # 5. Extract the final response
+    final_messages = final_state["messages"]
+    ai_reply = final_messages[-1].content if final_messages and isinstance(final_messages[-1], AIMessage) else "Sorry, I couldn't generate a response."
+
+    # 6. Save updated history
+    save_history(session_id, final_messages)
+    print(f"--- Saved History ({len(final_messages)} messages) ---")
+
+    # 7. Set session cookie
+    response.set_cookie(key="session_id", value=session_id, httponly=True, samesite="Lax", max_age=3600*24*7) # 1 week
+
+    # 8. Get bot settings from database
+    bot_settings = get_bot_settings_model(db)
+    
+    # 9. Use quick actions from database settings
+    if bot_settings.quick_actions:
+        quick_actions = [QuickAction(**qa) for qa in bot_settings.quick_actions]
+    else:
+        # Fallback to default quick actions
+        quick_actions = [
+            QuickAction(label="Return Policy", value="What's your return policy?"),
+            QuickAction(label="Shipping Info", value="How long does shipping take?")
+        ]
+
+    return BotMessageResponse(
+        reply=ai_reply,
+        quick_actions=quick_actions,
+        products=None,
+        order_info=None,
+        confidence_score=0.95,  # Mock confidence score
+        source="langgraph-test"
+    )

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any, List
-from app.services.milvus_client import insert_embedding, get_embedding, search_embedding, get_all_entries
+from app.services.milvus_client import insert_embedding, get_embedding, search_embedding, get_all_entries, connect_to_milvus
 
 router = APIRouter(tags=["vector-store"])
 
@@ -100,6 +100,9 @@ async def get_all_vector_store_entries():
             formatted_entries.append({
                 "id": entry.get("id", ""),
                 "text": entry.get("text", ""),
+                "title": f"Entry #{entry.get('id', '')}" if entry.get("id") else "Knowledge Entry",
+                "content": entry.get("text", ""),
+                "tags": ["vector-store"]
             })
         
         return {
@@ -114,3 +117,28 @@ async def get_all_vector_store_entries():
             status_code=500,
             detail=f"Failed to get vector store entries: {str(e)}"
         )
+
+@router.get("/vector-store/status", response_model=Dict[str, Any])
+async def check_vector_store_status():
+    """Check the status of the vector store connection"""
+    try:
+        # Try to connect to Milvus
+        connect_to_milvus()
+        
+        # If we get here, the connection was successful
+        return {
+            "success": True,
+            "status": "connected",
+            "message": "Successfully connected to vector store"
+        }
+    except Exception as e:
+        import traceback
+        print(f"Error connecting to vector store: {str(e)}\n{traceback.format_exc()}")
+        
+        # Return a 200 response with connection failure info rather than an error
+        # This allows the frontend to handle the case gracefully
+        return {
+            "success": False,
+            "status": "disconnected",
+            "message": f"Failed to connect to vector store: {str(e)}"
+        }

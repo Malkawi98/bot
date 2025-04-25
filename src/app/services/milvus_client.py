@@ -197,6 +197,7 @@ def search_embedding(embedding: list[float], top_k: int = 5,
                      collection_name: str = COLLECTION_NAME):
     # Ensure collection exists
     if collection_name not in list_collections():
+        print(f"Collection {collection_name} does not exist. Creating it.")
         create_collection(collection_name)
         # If collection is empty, return empty results
         return []
@@ -206,15 +207,72 @@ def search_embedding(embedding: list[float], top_k: int = 5,
 
     # Load collection into memory
     col = load_collection(collection_name)
-
+    
     # Perform search
     try:
-        results = col.search([embedding], "embedding",
-            param={"metric_type": "L2", "params": {"nprobe": 10}}, limit=top_k,
-            output_fields=["text"], )
-        return results
+        print(f"Searching in collection {collection_name} with top_k={top_k}")
+        results = col.search(
+            data=[embedding], 
+            anns_field="embedding",
+            param={"metric_type": "L2", "params": {"nprobe": 10}}, 
+            limit=top_k,
+            output_fields=["text"], 
+        )
+        print(f"Search results: {results}")
+        
+        # Direct approach - extract text from search results
+        simplified_results = []
+        
+        # Handle the case where results might be a string representation
+        if isinstance(results, str):
+            print("Results are in string format, attempting to parse...")
+            # This is a fallback for when results are returned as a string
+            import re
+            # Extract text fields from the string representation
+            text_matches = re.findall(r"text': '([^']+)'}", results)
+            for text in text_matches:
+                simplified_results.append({
+                    'text': text,
+                    'score': 0.0  # We don't have score info in this case
+                })
+                print(f"Extracted text from string: {text[:50]}...")
+        else:
+            # Normal case - results are objects
+            if results and len(results) > 0:
+                for hit in results[0]:
+                    try:
+                        if hasattr(hit, 'entity') and isinstance(hit.entity, dict):
+                            text = hit.entity.get('text', '')
+                            if text:
+                                simplified_results.append({
+                                    'text': text,
+                                    'score': hit.distance if hasattr(hit, 'distance') else 0.0
+                                })
+                                print(f"Added text with score {hit.distance if hasattr(hit, 'distance') else 0.0}: {text[:50]}...")
+                    except Exception as inner_e:
+                        print(f"Error processing hit: {inner_e}")
+        
+        # If we still don't have results, try one more approach with the raw string
+        if not simplified_results and isinstance(results, str):
+            # Try to extract text directly from the string representation
+            if "text" in results:
+                # Very simple extraction - just get something useful
+                start_idx = results.find("text") + 8  # Skip past "text': '"
+                end_idx = results.find("'", start_idx)
+                if start_idx > 8 and end_idx > start_idx:
+                    text = results[start_idx:end_idx]
+                    simplified_results.append({
+                        'text': text,
+                        'score': 0.0
+                    })
+                    print(f"Last resort extraction: {text[:50]}...")
+        
+        print(f"Simplified results: {len(simplified_results)} items")
+        return simplified_results
     except Exception as e:
+        import traceback
         print(f"Search error: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
         # Return empty results on error
         return []
 
