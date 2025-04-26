@@ -30,6 +30,12 @@
                 <a href="/knowledge-base" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
                     <i class="fas fa-book mr-3"></i>Knowledge Base
                 </a>
+                <a href="/product-management" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+                    <i class="fas fa-shopping-cart mr-3"></i>Product Management
+                </a>
+                <a href="/coupon-management" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+                    <i class="fas fa-tag mr-3"></i>Coupon Management
+                </a>
                 <a href="/langgraph-chat-test" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
                     <i class="fas fa-project-diagram mr-3"></i>LangGraph Chat
                 </a>
@@ -86,25 +92,11 @@
                                 </div>
                                 
                                 <div class="mb-4 relative">
-                                    <label class="block text-gray-700 text-sm font-bold mb-2" for="response-time">
-                                        Response Time
-                                    </label>
-                                    <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="response-time">
-                                        <option value="immediate">Immediate</option>
-                                        <option value="delayed">Delayed (typing indicator)</option>
-                                        <option value="variable">Variable (based on message length)</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="mb-4 relative">
                                     <label class="block text-gray-700 text-sm font-bold mb-2" for="language">
                                         Primary Language
                                     </label>
                                     <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="language">
                                         <option value="en">English</option>
-                                        <option value="es">Spanish</option>
-                                        <option value="fr">French</option>
-                                        <option value="de">German</option>
                                         <option value="ar">Arabic</option>
                                     </select>
                                 </div>
@@ -178,14 +170,11 @@
                 // Populate advanced settings
                 if (data.advanced_settings) {
                     const advSettings = data.advanced_settings;
-                    if (document.getElementById('response-time')) {
-                        document.getElementById('response-time').value = advSettings.response_time || 'Immediate';
-                    }
                     if (document.getElementById('language')) {
-                        document.getElementById('language').value = advSettings.language || 'English';
+                        document.getElementById('language').value = advSettings.language || 'en';
                     }
                     if (document.getElementById('tone')) {
-                        document.getElementById('tone').value = advSettings.tone || 'Friendly';
+                        document.getElementById('tone').value = advSettings.tone || 'friendly';
                     }
                     if (document.getElementById('max-message-length')) {
                         document.getElementById('max-message-length').value = advSettings.max_message_length || 500;
@@ -209,23 +198,27 @@
             saveStatus.textContent = 'Saving...';
             saveStatus.classList.remove('hidden');
             
-            // Get advanced settings
+            // Get advanced settings - removing the reference to non-existent field
             const advancedSettings = {
-                response_time: document.getElementById('response-time').value,
                 language: document.getElementById('language').value,
                 tone: document.getElementById('tone').value,
                 max_message_length: parseInt(document.getElementById('max-message-length').value)
             };
             
+            // Prepare quick actions (empty for now but keep the field to maintain schema compatibility)
+            const quickActions = [];
+            
             const data = {
                 bot_name: document.getElementById('bot-name').value,
                 welcome_message: document.getElementById('welcome-message').value,
                 fallback_message: document.getElementById('fallback-message').value,
-                quick_actions: [], // Empty array as we're removing quick actions
+                quick_actions: quickActions,
                 advanced_settings: advancedSettings
             };
             
             try {
+                console.log('Sending data to server:', data);
+                
                 // Use the database-driven API endpoint with PUT method
                 const response = await fetch('/api/v1/bot-settings', {
                     method: 'PUT',

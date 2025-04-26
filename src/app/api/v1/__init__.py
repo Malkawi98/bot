@@ -12,6 +12,8 @@ from .bot_settings import router as bot_settings_router
 from .dashboard import router as dashboard_router
 from .dashboard_api import router as dashboard_api_router
 from .auth_ui import router as auth_ui_router
+from .products import router as products_router
+from .product_ui import router as product_ui_router
 
 router = APIRouter(prefix="/v1")
 router.include_router(login_router)
@@ -26,3 +28,5 @@ router.include_router(bot_settings_router)
 router.include_router(dashboard_router)
 router.include_router(dashboard_api_router)
 router.include_router(auth_ui_router)
+router.include_router(products_router)
+router.include_router(product_ui_router)

@@ -5,13 +5,17 @@ import re
 import random
 from datetime import datetime, timedelta
 from app.services.graph_service.state import ConversationState
+from app.services.product_search import ProductSearchService
+from app.services.product import ProductService
+from sqlalchemy.orm import Session
 
 # Initialize Services
 rag_service = RAGService()
 
-# Mock data for demonstration
+# Mock data for demonstration (only used as fallback)
 ORDER_STATUSES = ["Processing", "Shipped", "Delivered", "Cancelled"]
-PRODUCTS = [
+# We'll replace this with actual database queries
+FALLBACK_PRODUCTS = [
     {"id": 1, "name": "Wireless Earbuds", "price": 79.99, "stock": 15},
     {"id": 2, "name": "Smart Watch", "price": 199.99, "stock": 8},
     {"id": 3, "name": "Bluetooth Speaker", "price": 59.99, "stock": 0},
@@ -21,6 +25,36 @@ PRODUCTS = [
 
 def _generate_random_order_number():
     return str(random.randint(10000, 99999))
+
+def _get_product_info(product_name, db: Optional[Session] = None):
+    """Get product information from the database or fallback to mock data"""
+    if db is None:
+        # Fallback to mock data if no database session
+        print("No database session provided, using fallback product data")
+        product_name = product_name.lower()
+        for product in FALLBACK_PRODUCTS:
+            if product_name in product["name"].lower():
+                return product
+        return None
+    
+    # Use the ProductSearchService to search the database
+    try:
+        product_search = ProductSearchService(db)
+        found, product_info = product_search.search_product_by_name(product_name)
+        if found:
+            # Convert database product to the expected format
+            return {
+                "id": product_info["id"],
+                "name": product_info["name"],
+                "price": product_info["price"],
+                "stock": product_info["stock_quantity"],
+                "description": product_info.get("description", ""),
+                "category": product_info.get("category", "")
+            }
+        return None
+    except Exception as e:
+        print(f"Error searching for product: {e}")
+        return None
 
 def _get_order_info(order_number):
     # Mock order information
@@ -159,14 +193,37 @@ def get_order_status(order_id_or_query: str) -> Dict[str, Any]:
 def check_product_availability(product_name: str) -> Dict[str, Any]:
     """Checks if a product is in stock."""
     print(f"--- Tool: Checking availability for: {product_name} ---")
-    # Look in PRODUCTS
-    found = [p for p in PRODUCTS if product_name.lower() in p['name'].lower()]
-    if found:
-        product = found[0]
-        availability = "In Stock" if product.get("stock", 0) > 0 else "Out of Stock"
-        stock_count = product.get("stock", 0)
+    # We can't pass the db directly through the tool due to Pydantic schema limitations
+    # The db will be handled in the node function instead
+    db = None
+    
+    # Extract product name from query if a full query was passed
+    if len(product_name.split()) > 3:  # Likely a full query, not just a product name
+        product_match = re.search(r'(?:do you have|is there|availability of|stock of|looking for)\s+([\w\s]+)(?:\?|$)', product_name.lower())
+        if not product_match:
+            # Try a more general pattern
+            product_match = re.search(r'([\w\s]+)(?:\s+in stock|\s+available|\?|$)', product_name.lower())
+        
+        if product_match:
+            product_name = product_match.group(1).strip()
+            print(f"--- Tool: Extracted product name: {product_name} ---")
+    
+    # Look in database products
+    product = _get_product_info(product_name, db)
+    if product:
+        # For database products, stock is stored as stock_quantity
+        stock_field = "stock" if "stock" in product else "stock_quantity"
+        availability = "In Stock" if product.get(stock_field, 0) > 0 else "Out of Stock"
+        stock_count = product.get(stock_field, 0)
         print(f"--- Tool: Product '{product['name']}' availability: {availability} ({stock_count}) ---")
-        return {"product_name": product['name'], "availability": availability, "stock": stock_count}
+        return {
+            "product_name": product['name'],
+            "availability": availability,
+            "stock": stock_count,
+            "price": product.get('price', 0),
+            "description": product.get('description', ''),
+            "category": product.get('category', '')
+        }
     else:
         print(f"--- Tool: Product '{product_name}' not found. ---")
         return {"product_name": product_name, "availability": "Not Found", "error": "Product not found in catalog."}

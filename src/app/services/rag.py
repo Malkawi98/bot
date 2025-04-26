@@ -90,6 +90,7 @@ class RAGService:
         embeddings = []
         texts = []
         languages = []
+        metadata = []  # Initialize metadata list
         
         for i, chunk in enumerate(chunks):
             if not chunk.strip():

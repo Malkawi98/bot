@@ -1,0 +1,758 @@
+{% extends "base_chat.html" %}
+
+{% block title %}E-Commerce Support Bot - Product Management{% endblock %}
+
+{% block styles %}
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+    .sidebar-active { background-color: rgba(17, 24, 39, 0.8); }
+    .transition-width { transition: width 0.3s ease-in-out; }
+</style>
+{% endblock %}
+
+{% block sidebar %}
+<div id="sidebar" class="bg-gray-900 text-white w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform md:relative md:translate-x-0 transition duration-200 ease-in-out z-20">
+    <div class="flex items-center justify-between px-4">
+        <div class="text-2xl font-semibold">
+            <span class="text-teal-400">E-Bot</span> Admin
+        </div>
+        <button id="closeSidebar" class="md:hidden rounded-lg focus:outline-none focus:shadow-outline p-1">
+            <i class="fas fa-times text-white text-lg"></i>
+        </button>
+    </div>
+    <nav class="mt-10">
+        <a href="/bot-config" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+            <i class="fas fa-cog mr-3"></i>Bot Configuration
+        </a>
+        <a href="/knowledge-base" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+            <i class="fas fa-book mr-3"></i>Knowledge Base
+        </a>
+        <a href="/product-management" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg sidebar-active">
+            <i class="fas fa-shopping-cart mr-3"></i>Product Management
+        </a>
+        <a href="/coupon-management" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+            <i class="fas fa-tag mr-3"></i>Coupon Management
+        </a>
+        <a href="/langgraph-chat-test" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+            <i class="fas fa-project-diagram mr-3"></i>LangGraph Chat
+        </a>
+        <a href="/" class="flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg mt-10">
+            <i class="fas fa-home mr-3"></i>Back to Home
+        </a>
+    </nav>
+</div>
+{% endblock %}
+
+{% block main_content %}
+    <!-- Top Navigation -->
+    <header class="bg-white shadow-md py-4 px-4">
+        <div class="flex items-center justify-between">
+            <button id="openSidebar" class="md:hidden rounded-lg focus:outline-none focus:shadow-outline p-1">
+                <i class="fas fa-bars text-gray-800 text-lg"></i>
+            </button>
+            <div class="flex items-center space-x-4">
+                <span class="text-gray-700">Admin User</span>
+                <img class="h-8 w-8 rounded-full" src="https://ui-avatars.com/api/?name=Admin&background=0D8ABC&color=fff" alt="Admin">
+            </div>
+        </div>
+    </header>
+
+    <!-- Product Management Content -->
+    <div id="product-content" class="container mx-auto px-4 py-6">
+        <h1 class="text-2xl font-semibold text-gray-800 mb-6">Product Management</h1>
+        
+        <!-- Main content in a single column layout -->
+        <div class="grid grid-cols-1 gap-6">
+            <!-- Add Product Section -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Products</h2>
+                    <button id="add-product-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg focus:outline-none">
+                        <i class="fas fa-plus mr-2"></i>Add Product
+                    </button>
+                </div>
+                
+                <!-- Product Filters -->
+                <div class="mb-6 flex flex-wrap gap-4 items-center">
+                    <div class="flex items-center">
+                        <label class="mr-2 text-gray-700">Category:</label>
+                        <select id="category-filter" class="border rounded px-3 py-2">
+                            <option value="">All Categories</option>
+                            <option value="electronics">Electronics</option>
+                            <option value="clothing">Clothing</option>
+                            <option value="home">Home & Kitchen</option>
+                            <option value="books">Books</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center">
+                        <label class="mr-2 text-gray-700">Language:</label>
+                        <select id="language-filter" class="border rounded px-3 py-2">
+                            <option value="">All Languages</option>
+                            <option value="en">English</option>
+                            <option value="ar">Arabic (العربية)</option>
+                        </select>
+                    </div>
+                    <div class="flex-grow"></div>
+                    <div class="relative">
+                        <input type="text" id="product-search" placeholder="Search products..." class="border rounded pl-10 pr-4 py-2 w-full">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <!-- Products List -->
+                <div id="products-list" class="overflow-x-auto">
+                    <table class="min-w-full bg-white">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="py-3 px-4 text-left">ID</th>
+                                <th class="py-3 px-4 text-left">Name</th>
+                                <th class="py-3 px-4 text-left">Category</th>
+                                <th class="py-3 px-4 text-right">Price</th>
+                                <th class="py-3 px-4 text-right">Stock</th>
+                                <th class="py-3 px-4 text-center">Language</th>
+                                <th class="py-3 px-4 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-table-body">
+                            <!-- Products will be loaded here -->
+                            <tr>
+                                <td colspan="7" class="py-4 text-center text-gray-500">Loading products...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <div class="mt-4 flex justify-between items-center">
+                    <div class="text-sm text-gray-600">
+                        Showing <span id="showing-start">0</span> to <span id="showing-end">0</span> of <span id="total-products">0</span> products
+                    </div>
+                    <div class="flex space-x-2">
+                        <button id="prev-page" class="px-3 py-1 border rounded text-gray-600 hover:bg-gray-100 disabled:opacity-50">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button id="next-page" class="px-3 py-1 border rounded text-gray-600 hover:bg-gray-100 disabled:opacity-50">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add/Edit Product Modal -->
+        <div id="product-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl">
+                <div class="flex justify-between items-center border-b px-6 py-4">
+                    <h3 id="modal-title" class="text-xl font-semibold">Add New Product</h3>
+                    <button id="close-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <form id="product-form">
+                        <input type="hidden" id="product-id">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <!-- Product Name -->
+                            <div class="col-span-2">
+                                <label class="block text-gray-700 text-sm font-bold mb-2" for="product-name">
+                                    Product Name*
+                                </label>
+                                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                                       id="product-name" type="text" required>
+                            </div>
+                            
+                            <!-- Price and Currency -->
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2" for="product-price">
+                                    Price*
+                                </label>
+                                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                                       id="product-price" type="number" step="0.01" min="0" required>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2" for="product-currency">
+                                    Currency
+                                </label>
+                                <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                                        id="product-currency">
+                                    <option value="USD">USD ($)</option>
+                                    <option value="EUR">EUR (€)</option>
+                                    <option value="GBP">GBP (£)</option>
+                                    <option value="JPY">JPY (¥)</option>
+                                    <option value="AED">AED (د.إ)</option>
+                                    <option value="SAR">SAR (ر.س)</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Stock and Category -->
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2" for="product-stock">
+                                    Stock Quantity*
+                                </label>
+                                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                                       id="product-stock" type="number" min="0" required>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2" for="product-category">
+                                    Category*
+                                </label>
+                                <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                                        id="product-category" required>
+                                    <option value="">Select a category</option>
+                                    <option value="electronics">Electronics</option>
+                                    <option value="clothing">Clothing</option>
+                                    <option value="home">Home & Kitchen</option>
+                                    <option value="books">Books</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Language and Alternative -->
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2" for="product-language">
+                                    Language*
+                                </label>
+                                <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                                        id="product-language" required>
+                                    <option value="en">English</option>
+                                    <option value="ar">Arabic (العربية)</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2" for="product-alternative">
+                                    Alternative to Product ID
+                                </label>
+                                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                                       id="product-alternative" type="number" min="1">
+                            </div>
+                            
+                            <!-- Image URL -->
+                            <div class="col-span-2">
+                                <label class="block text-gray-700 text-sm font-bold mb-2" for="product-image">
+                                    Image URL
+                                </label>
+                                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                                       id="product-image" type="url">
+                            </div>
+                            
+                            <!-- Description -->
+                            <div class="col-span-2">
+                                <label class="block text-gray-700 text-sm font-bold mb-2" for="product-description">
+                                    Description
+                                </label>
+                                <textarea class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                                          id="product-description" rows="4"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-4">
+                            <button type="button" id="cancel-product" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                                Cancel
+                            </button>
+                            <button type="submit" id="save-product" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                                Save Product
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+<!-- Notification Toast -->
+<div id="notification" class="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg transform transition-transform duration-300 translate-y-20 opacity-0 flex items-center">
+    <span id="notification-message">Notification message</span>
+    <button id="close-notification" class="ml-4 text-white">
+        <i class="fas fa-times"></i>
+    </button>
+</div>
+
+{% block scripts %}
+<script>
+    // Mobile sidebar toggle
+    document.getElementById('openSidebar')?.addEventListener('click', function() {
+        document.getElementById('sidebar').classList.remove('-translate-x-full');
+    });
+    
+    document.getElementById('closeSidebar')?.addEventListener('click', function() {
+        document.getElementById('sidebar').classList.add('-translate-x-full');
+    });
+    
+    // Notification system
+    function showNotification(message, type = 'success') {
+        const notification = document.getElementById('notification');
+        const notificationMessage = document.getElementById('notification-message');
+        
+        // Check if notification elements exist
+        if (!notification || !notificationMessage) {
+            console.warn('Notification elements not found in the DOM');
+            return;
+        }
+        
+        // Set message
+        notificationMessage.textContent = message;
+        
+        // Set color based on type
+        if (type === 'success') {
+            notification.classList.remove('bg-red-600', 'bg-blue-600');
+            notification.classList.add('bg-green-600');
+        } else if (type === 'error') {
+            notification.classList.remove('bg-green-600', 'bg-blue-600');
+            notification.classList.add('bg-red-600');
+        } else if (type === 'info') {
+            notification.classList.remove('bg-green-600', 'bg-red-600');
+            notification.classList.add('bg-blue-600');
+        }
+        
+        // Show notification
+        notification.classList.remove('translate-y-20', 'opacity-0');
+        notification.classList.add('translate-y-0', 'opacity-100');
+        
+        // Auto hide after 5 seconds
+        setTimeout(() => {
+            if (notification) {
+                notification.classList.remove('translate-y-0', 'opacity-100');
+                notification.classList.add('translate-y-20', 'opacity-0');
+            }
+        }, 5000);
+    }
+    
+    document.getElementById('close-notification')?.addEventListener('click', function() {
+        const notification = document.getElementById('notification');
+        if (notification) {
+            notification.classList.remove('translate-y-0', 'opacity-100');
+            notification.classList.add('translate-y-20', 'opacity-0');
+        }
+    });
+    
+    // Product Management
+    let currentPage = 1;
+    const pageSize = 10;
+    let totalProducts = 0;
+    
+    // Load products
+    async function loadProducts() {
+        try {
+            const categoryFilter = document.getElementById('category-filter')?.value || '';
+            const languageFilter = document.getElementById('language-filter')?.value || '';
+            const searchTerm = document.getElementById('product-search')?.value || '';
+            
+            const skip = (currentPage - 1) * pageSize;
+            
+            // Get the base URL from the current window location
+            const baseUrl = window.location.origin;
+            
+            let url = `${baseUrl}/api/v1/products?skip=${skip}&limit=${pageSize}`;
+            if (categoryFilter) url += `&category=${encodeURIComponent(categoryFilter)}`;
+            if (languageFilter) url += `&language=${encodeURIComponent(languageFilter)}`;
+            if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
+            
+            // Fetch products from the database
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.detail || 'Failed to load products');
+            }
+            
+            totalProducts = data.total;
+            renderProducts(data.products);
+            updatePagination();
+            
+        } catch (error) {
+            console.error('Error loading products:', error);
+            showNotification('Failed to load products: ' + error.message, 'error');
+            
+            // Show error in the table
+            const tableBody = document.getElementById('products-table-body');
+            if (tableBody) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="py-4 text-center text-red-500">
+                            <i class="fas fa-exclamation-circle mr-2"></i>
+                            Error loading products. 
+                            <button id="retry-load-btn" class="text-blue-500 underline ml-2">Retry</button>
+                        </td>
+                    </tr>
+                `;
+                
+                // Add retry button functionality
+                document.getElementById('retry-load-btn')?.addEventListener('click', loadProducts);
+            }
+        }
+    }
+    
+    function renderProducts(products) {
+        const tableBody = document.getElementById('products-table-body');
+        if (!tableBody) {
+            console.error('Products table body element not found');
+            return;
+        }
+        
+        if (!products || products.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="py-4 text-center text-gray-500">No products found</td>
+                </tr>
+            `;
+            return;
+        }
+        
+        let html = '';
+        
+        products.forEach(product => {
+            // Safely access product properties with defaults
+            const id = product.id || 0;
+            const name = product.name || 'Unnamed Product';
+            const category = product.category || 'Uncategorized';
+            const price = product.price || 0;
+            const currency = product.currency || 'USD';
+            const stockQuantity = product.stock_quantity || 0;
+            const language = product.language || 'en';
+            
+            const languageBadge = language === 'ar' 
+                ? '<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Arabic</span>'
+                : '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">English</span>';
+                
+            const stockStatus = stockQuantity > 0
+                ? `<span class="text-green-600">${stockQuantity}</span>`
+                : '<span class="text-red-600">0</span>';
+                
+            html += `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="py-3 px-4">${id}</td>
+                    <td class="py-3 px-4">${name}</td>
+                    <td class="py-3 px-4">${category}</td>
+                    <td class="py-3 px-4 text-right">${price} ${currency}</td>
+                    <td class="py-3 px-4 text-right">${stockStatus}</td>
+                    <td class="py-3 px-4 text-center">${languageBadge}</td>
+                    <td class="py-3 px-4 text-center">
+                        <button class="edit-product-btn text-blue-500 hover:text-blue-700 mr-2" data-id="${id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="delete-product-btn text-red-500 hover:text-red-700" data-id="${id}">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        tableBody.innerHTML = html;
+        
+        // Add event listeners to edit and delete buttons
+        document.querySelectorAll('.edit-product-btn').forEach(btn => {
+            btn?.addEventListener('click', () => editProduct(btn.dataset.id));
+        });
+        
+        document.querySelectorAll('.delete-product-btn').forEach(btn => {
+            btn?.addEventListener('click', () => deleteProduct(btn.dataset.id));
+        });
+    }
+    
+    function updatePagination() {
+        const start = (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalProducts);
+        
+        const showingStart = document.getElementById('showing-start');
+        const showingEnd = document.getElementById('showing-end');
+        const totalProductsElement = document.getElementById('total-products');
+        
+        if (showingStart) showingStart.textContent = totalProducts > 0 ? start : 0;
+        if (showingEnd) showingEnd.textContent = end;
+        if (totalProductsElement) totalProductsElement.textContent = totalProducts;
+        
+        // Update button states
+        const prevButton = document.getElementById('prev-page');
+        const nextButton = document.getElementById('next-page');
+        
+        if (prevButton) {
+            prevButton.disabled = currentPage <= 1;
+            prevButton.classList.toggle('opacity-50', currentPage <= 1);
+        }
+        
+        if (nextButton) {
+            const hasNextPage = (currentPage * pageSize) < totalProducts;
+            nextButton.disabled = !hasNextPage;
+            nextButton.classList.toggle('opacity-50', !hasNextPage);
+        }
+    }
+    
+    // Modal functionality
+    function openModal(title = 'Add New Product') {
+        console.log('Opening modal with title:', title);
+        const modalTitle = document.getElementById('modal-title');
+        const productModal = document.getElementById('product-modal');
+        
+        if (modalTitle) {
+            modalTitle.textContent = title;
+        } else {
+            console.error('Modal title element not found');
+        }
+        
+        if (productModal) {
+            console.log('Showing product modal');
+            productModal.classList.remove('hidden');
+            // Force modal to be visible with inline style
+            productModal.style.display = 'flex';
+        } else {
+            console.error('Product modal element not found');
+        }
+    }
+    
+    function closeModal() {
+        console.log('Closing modal');
+        const productModal = document.getElementById('product-modal');
+        if (productModal) {
+            productModal.classList.add('hidden');
+            // Also reset the display style
+            productModal.style.display = 'none';
+            console.log('Modal hidden');
+        } else {
+            console.error('Product modal element not found when closing');
+        }
+        resetForm();
+    }
+    
+    function resetForm() {
+        const productForm = document.getElementById('product-form');
+        const productId = document.getElementById('product-id');
+        
+        if (productForm) productForm.reset();
+        if (productId) productId.value = '';
+    }
+    
+    // Add product
+    async function addProduct(productData) {
+        try {
+            console.log('Adding product with data:', productData);
+            // Get the base URL from the current window location
+            const baseUrl = window.location.origin;
+            console.log('Using base URL:', baseUrl);
+            const response = await fetch(`${baseUrl}/api/v1/products`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(productData)
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.detail || 'Failed to add product');
+            }
+            
+            showNotification('Product added successfully', 'success');
+            closeModal();
+            loadProducts();
+            
+        } catch (error) {
+            console.error('Error adding product:', error);
+            showNotification('Failed to add product: ' + error.message, 'error');
+        }
+    }
+    
+    // Edit product
+    async function editProduct(productId) {
+        try {
+            // Get the base URL from the current window location
+            const baseUrl = window.location.origin;
+            const response = await fetch(`${baseUrl}/api/v1/products/${productId}`);
+            const product = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(product.detail || 'Failed to load product details');
+            }
+            
+            // Fill the form with product data
+            document.getElementById('product-id').value = product.id;
+            document.getElementById('product-name').value = product.name;
+            document.getElementById('product-price').value = product.price;
+            document.getElementById('product-currency').value = product.currency;
+            document.getElementById('product-stock').value = product.stock_quantity;
+            document.getElementById('product-category').value = product.category || '';
+            document.getElementById('product-image').value = product.image_url || '';
+            document.getElementById('product-language').value = product.language || 'en';
+            document.getElementById('product-description').value = product.description || '';
+            document.getElementById('product-alternative').value = product.alternative_to_id || '';
+            
+            // Open the modal
+            openModal('Edit Product');
+            
+        } catch (error) {
+            console.error('Error loading product details:', error);
+            showNotification('Failed to load product details: ' + error.message, 'error');
+        }
+    }
+    
+    // Update product
+    async function updateProduct(productId, productData) {
+        try {
+            // Get the base URL from the current window location
+            const baseUrl = window.location.origin;
+            const response = await fetch(`${baseUrl}/api/v1/products/${productId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(productData)
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.detail || 'Failed to update product');
+            }
+            
+            showNotification('Product updated successfully', 'success');
+            closeModal();
+            loadProducts();
+            
+        } catch (error) {
+            console.error('Error updating product:', error);
+            showNotification('Failed to update product: ' + error.message, 'error');
+        }
+    }
+    
+    // Delete product
+    async function deleteProduct(productId) {
+        if (!confirm('Are you sure you want to delete this product?')) {
+            return;
+        }
+        
+        try {
+            // Get the base URL from the current window location
+            const baseUrl = window.location.origin;
+            const response = await fetch(`${baseUrl}/api/v1/products/${productId}`, {
+                method: 'DELETE'
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.detail || 'Failed to delete product');
+            }
+            
+            showNotification('Product deleted successfully', 'success');
+            loadProducts();
+            
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            showNotification('Failed to delete product: ' + error.message, 'error');
+        }
+    }
+    
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initial load
+        loadProducts();
+        
+        // Filter changes
+        document.getElementById('category-filter')?.addEventListener('change', function() {
+            currentPage = 1;
+            loadProducts();
+        });
+        
+        document.getElementById('language-filter')?.addEventListener('change', function() {
+            currentPage = 1;
+            loadProducts();
+        });
+        
+        // Search
+        let searchTimeout;
+        document.getElementById('product-search')?.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentPage = 1;
+                loadProducts();
+            }, 500);
+        });
+        
+        // Pagination
+        document.getElementById('prev-page')?.addEventListener('click', function() {
+            if (currentPage > 1) {
+                currentPage--;
+                loadProducts();
+            }
+        });
+        
+        document.getElementById('next-page')?.addEventListener('click', function() {
+            if ((currentPage * pageSize) < totalProducts) {
+                currentPage++;
+                loadProducts();
+            }
+        });
+        
+        // Modal - Fix for Add Product button
+        const addProductBtn = document.getElementById('add-product-btn');
+        if (addProductBtn) {
+            console.log('Add Product button found, attaching event listener');
+            addProductBtn.addEventListener('click', function(e) {
+                console.log('Add Product button clicked');
+                e.preventDefault();
+                openModal('Add New Product');
+            });
+        } else {
+            console.error('Add Product button not found in the DOM');
+        }
+        
+        document.getElementById('close-modal')?.addEventListener('click', closeModal);
+        document.getElementById('cancel-product')?.addEventListener('click', closeModal);
+        
+        // Form submission
+        const productForm = document.getElementById('product-form');
+        if (productForm) {
+            console.log('Product form found, attaching submit event');
+            productForm.addEventListener('submit', function(e) {
+                console.log('Form submitted');
+                e.preventDefault();
+                
+                const productId = document.getElementById('product-id')?.value || '';
+                
+                const productData = {
+                    name: document.getElementById('product-name')?.value || '',
+                    price: parseFloat(document.getElementById('product-price')?.value || '0'),
+                    currency: document.getElementById('product-currency')?.value || 'USD',
+                    stock_quantity: parseInt(document.getElementById('product-stock')?.value || '0'),
+                    category: document.getElementById('product-category')?.value || '',
+                    image_url: document.getElementById('product-image')?.value || null,
+                    language: document.getElementById('product-language')?.value || 'en',
+                    description: document.getElementById('product-description')?.value || null
+                };
+                
+                const alternativeId = document.getElementById('product-alternative')?.value || '';
+                if (alternativeId) {
+                    productData.alternative_to_id = parseInt(alternativeId);
+                }
+                
+                console.log('Processing form with data:', productData);
+                
+                if (productId) {
+                    // Update existing product
+                    console.log('Updating existing product with ID:', productId);
+                    updateProduct(productId, productData);
+                } else {
+                    // Add new product
+                    console.log('Adding new product');
+                    addProduct(productData);
+                }
+            });
+        } else {
+            console.error('Product form not found in the DOM');
+        }
+        
+        // Close modal when clicking outside
+        document.getElementById('product-modal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, HttpUrl, ValidationError
 from typing import Optional, List, Dict, Any
 from fastapi import status
-from src.app.services.milvus_client import get_all_entries, reset_collection
+from app.services.milvus_client import get_all_entries, reset_collection
 from app.services.rag import RAGService
 import os
 import tempfile

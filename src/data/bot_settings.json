@@ -1,5 +1,5 @@
 {
-    "bot_name": "E-Commerce Support Bot",
+    "bot_name": "E-Commerce Support",
     "welcome_message": "Hello! I'm your support assistant. How can I help you today?",
     "fallback_message": "I'm sorry, I couldn't understand your request. Could you please rephrase or select one of the quick options below?",
     "quick_actions": [
@@ -18,8 +18,8 @@
     ],
     "advanced_settings": {
         "response_time": "immediate",
-        "language": "en",
-        "tone": "friendly",
+        "language": "",
+        "tone": "",
         "max_message_length": 500
     }
 }

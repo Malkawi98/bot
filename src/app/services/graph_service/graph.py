@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph, END
 from .state import ConversationState
-from .nodes import classify_intent_node, action_node, generate_response_node
+from .nodes import classify_intent_node, action_node, generate_response_node, frustration_node, manager_approval_node
 from .edges import route_based_on_intent, route_after_action
 
 # Create the graph
@@ -10,6 +10,8 @@ workflow = StateGraph(ConversationState)
 workflow.add_node("classify_intent", classify_intent_node)
 workflow.add_node("action_node", action_node)
 workflow.add_node("generate_response", generate_response_node)
+workflow.add_node("frustration_node", frustration_node)
+workflow.add_node("manager_approval_node", manager_approval_node)
 
 # Define edges
 workflow.set_entry_point("classify_intent")
@@ -21,6 +23,8 @@ workflow.add_conditional_edges(
     {
         "action_node": "action_node",
         "generate_response_node": "generate_response",
+        "frustration_node": "frustration_node",
+        "manager_approval_node": "manager_approval_node",
     }
 )
 
@@ -35,6 +39,12 @@ workflow.add_conditional_edges(
 
 # The final response generation leads to the end
 workflow.add_edge("generate_response", END)
+
+# Route frustration_node to generate_response
+workflow.add_edge("frustration_node", "generate_response")
+
+# Route manager_approval_node to generate_response
+workflow.add_edge("manager_approval_node", "generate_response")
 
 # Compile the graph
 graph_app = workflow.compile()

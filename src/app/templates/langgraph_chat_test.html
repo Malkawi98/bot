@@ -52,6 +52,12 @@
                 <a href="/knowledge-base" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
                     <i class="fas fa-book mr-3"></i>Knowledge Base
                 </a>
+                <a href="/product-management" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+                    <i class="fas fa-shopping-cart mr-3"></i>Product Management
+                </a>
+                <a href="/coupon-management" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+                    <i class="fas fa-tag mr-3"></i>Coupon Management
+                </a>
                 <a href="/langgraph-chat-test" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg sidebar-active">
                     <i class="fas fa-project-diagram mr-3"></i>LangGraph Chat
                 </a>
@@ -101,13 +107,13 @@
                                 <div class="chat-bubble-bot p-3 max-w-3xl">
                                     <p>Hello! I'm your E-Commerce support assistant powered by LangGraph. How can I help you today?</p>
                                     <div class="mt-2 flex flex-wrap gap-2">
-                                        <button class="quick-action-btn bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full">
+                                        <button type="button" class="quick-action-btn bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full">
                                             Check order status
                                         </button>
-                                        <button class="quick-action-btn bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full">
+                                        <button type="button" class="quick-action-btn bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full">
                                             Return policy
                                         </button>
-                                        <button class="quick-action-btn bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full">
+                                        <button type="button" class="quick-action-btn bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full">
                                             Are wireless earbuds in stock?
                                         </button>
                                     </div>
@@ -215,8 +221,11 @@
         // Handle quick action buttons
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('quick-action-btn')) {
-                messageInput.value = e.target.textContent.trim();
-                chatForm.dispatchEvent(new Event('submit'));
+                e.preventDefault();
+                const message = e.target.textContent.trim();
+                if (!message) return;
+                messageInput.value = '';
+                sendMessage(message, showThinkingEnabled);
             }
         });
         
@@ -467,12 +476,13 @@
         // Handle form submission
         chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            
             const message = messageInput.value.trim();
             if (!message) return;
-            
+            messageInput.value = '';
             sendMessage(message, showThinkingEnabled);
         });
+        
+
     </script>
 </body>
 </html>

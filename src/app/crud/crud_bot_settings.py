@@ -77,8 +77,12 @@ def update_bot_settings(
     Returns:
         Updated BotSettings object or None if not found
     """
+    print(f"Updating bot settings with ID {bot_settings_id}")
+    print(f"Advanced settings: {advanced_settings}")
+    
     db_settings = db.query(BotSettings).filter(BotSettings.id == bot_settings_id).first()
     if not db_settings:
+        print(f"No bot settings found with ID {bot_settings_id}")
         return None
     
     update_data = {}
@@ -94,15 +98,25 @@ def update_bot_settings(
     if advanced_settings is not None:
         # Merge with existing advanced settings
         current_advanced = db_settings.advanced_settings or {}
+        print(f"Current advanced settings: {current_advanced}")
         current_advanced.update(advanced_settings)
         update_data["advanced_settings"] = current_advanced
+        print(f"Updated advanced settings: {current_advanced}")
     
-    for key, value in update_data.items():
-        setattr(db_settings, key, value)
+    print(f"Updating with data: {update_data}")
     
-    db.commit()
-    db.refresh(db_settings)
-    return db_settings
+    try:
+        for key, value in update_data.items():
+            setattr(db_settings, key, value)
+        
+        db.commit()
+        db.refresh(db_settings)
+        print("Update successful!")
+        return db_settings
+    except Exception as e:
+        print(f"Error updating bot settings: {e}")
+        db.rollback()
+        return None
 
 
 def get_or_create_default_settings(db: Session) -> BotSettings:

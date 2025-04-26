@@ -178,10 +178,14 @@ def update_bot_settings(
     Returns:
         bool: True if successful, False otherwise
     """
+    print(f"Core update_bot_settings called with DB: {db is not None}")
+    print(f"Advanced settings: {advanced_settings}")
+    
     try:
         if db is not None:
             # Get current settings from database
             db_settings = db_get_settings(db)
+            print(f"Retrieved current settings from DB, ID: {db_settings.id}")
             
             # Update settings in database
             updated = db_update_settings(
@@ -195,6 +199,7 @@ def update_bot_settings(
             )
             
             success = updated is not None
+            print(f"DB update success: {success}")
             
             # Also update file-based settings
             if success:
@@ -212,6 +217,7 @@ def update_bot_settings(
                         current_settings["advanced_settings"] = {}
                     current_settings["advanced_settings"].update(advanced_settings)
                 save_bot_settings_to_file(current_settings)
+                print("Updated file-based settings")
             
             return success
         else:

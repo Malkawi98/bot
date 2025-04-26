@@ -2,19 +2,26 @@ from typing import List, Dict, Any, Optional, Tuple
 import re
 import random
 from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
 from app.services.rag import RAGService
+from app.services.product_search import ProductSearchService
+from app.services.coupon_service import CouponService
 
 # Initialize RAG service
 rag_service = RAGService()
 
-# Mock data for product catalog and order information
-from app.api.v1.bot import MOCK_PRODUCT_CATALOG, PRODUCTS, ORDER_STATUSES, FAQS
+# Import mock data for order information and FAQs
+from app.core.bot_constants import ORDER_STATUSES, FAQS
 
 class BotService:
-    def __init__(self):
+    def __init__(self, db: Session = None):
         self.rag_service = rag_service
-        self.product_catalog = MOCK_PRODUCT_CATALOG
-        self.products = PRODUCTS
+        self.db = db
+        self.product_search = None
+        self.coupon_service = None
+        if db:
+            self.product_search = ProductSearchService(db)
+            self.coupon_service = CouponService(db)
         self.order_statuses = ORDER_STATUSES
         self.faqs = FAQS
         
@@ -37,13 +44,24 @@ class BotService:
         confidence = 0.9  # Default high confidence
         additional_data = None
         
+        # Get language from session state or default to English
+        language = session_state.get("language", "en")
+        
         # Track conversation history
         if "history" not in session_state:
             session_state["history"] = []
         
         session_state["history"].append({"role": "user", "content": message})
         
-        # Check for FAQ matches first
+        # Check for coupon-related queries
+        if any(word in message_lower for word in ["coupon", "discount code", "promo code", "promotion", "offer"]):
+            if self.coupon_service:
+                reply, additional_data = self._handle_coupon_query(message_lower)
+                quick_actions = self._get_contextual_quick_actions(message_lower, "coupon")
+                session_state["history"].append({"role": "bot", "content": reply})
+                return reply, quick_actions, additional_data, 0.95
+        
+        # Check for FAQ matches
         for keyword, answer in self.faqs.items():
             if keyword in message_lower:
                 reply = answer
@@ -63,12 +81,21 @@ class BotService:
             return reply, quick_actions, {"order_info": order_info}, 0.9
         
         # Check for product inquiries
-        product_match, product_key = self._find_product_match(message_lower)
-        if product_match:
-            product_info = self.product_catalog[product_key]
+        product_match, product_info = self._find_product_match(message_lower, language)
+        if product_match and product_info:
             reply = self._format_product_info(product_info)
-            quick_actions = self._get_contextual_quick_actions(message_lower, "product", product_key)
-            additional_data = {"product_info": product_info}
+            quick_actions = self._get_contextual_quick_actions(message_lower, "product")
+            
+            # Format product info for the API response
+            formatted_product = {
+                "id": product_info.get("id", "unknown"),
+                "name": product_info.get("name", "Unknown Product"),
+                "price": float(product_info.get("price", 0.0)),
+                "image_url": product_info.get("image_url", "https://via.placeholder.com/150"),
+                "description": product_info.get("description", "No description available")
+            }
+            
+            additional_data = {"products": [formatted_product]}
             session_state["history"].append({"role": "bot", "content": reply})
             return reply, quick_actions, additional_data, 0.9
         
@@ -182,21 +209,45 @@ class BotService:
         
         return order_info, reply
     
-    def _find_product_match(self, message: str) -> Tuple[bool, Optional[str]]:
+    def _find_product_match(self, message: str, language: str = None) -> Tuple[bool, Dict[str, Any]]:
         """Find if the message contains a product inquiry"""
-        for product_key in self.product_catalog.keys():
-            if product_key in message:
-                return True, product_key
-        return False, None
+        if not self.product_search or not self.db:
+            return False, None
+        
+        # Clean up the message
+        message = message.lower().strip()
+        
+        # Get all products to check against the message
+        all_products = self.product_search.product_service.get_products(limit=100, language=language)
+        if not all_products:
+            return False, None
+        
+        # Check if any product name is contained in the message
+        for product in all_products:
+            product_name = product.name.lower()
+            if product_name in message:
+                # Found a product name in the message
+                return True, self.product_search._format_product_to_dict(product)
+        
+        # If no direct match, try the search service which includes fuzzy matching
+        # This is a fallback approach
+        found, product_info = self.product_search.search_product_by_name(message, language)
+        
+        return found, product_info
     
     def _format_product_info(self, product_info: Dict[str, Any]) -> str:
         """Format product information into a readable response"""
-        name = product_info["name"]
-        price = product_info["price"]
-        description = product_info["description"]
-        features = ", ".join(product_info["features"][:3])  # Show first 3 features
-        
-        return f"{name} - ${price}\n\n{description}\n\nKey features: {features}\n\nWould you like more information or would you like to add this to your cart?"
+        if not product_info:
+            return "I'm sorry, I couldn't find information about that product."
+            
+        in_stock = product_info.get('stock_quantity', 0) > 0
+        stock_status = f"In Stock: {'Yes' if in_stock else 'No'}"
+        if in_stock and 'stock_quantity' in product_info:
+            stock_status += f" ({product_info['stock_quantity']} available)"
+            
+        price_display = f"{product_info['price']} {product_info.get('currency', 'USD')}"
+            
+        return f"Here's information about {product_info['name']}:\n\nPrice: {price_display}\nDescription: {product_info.get('description', 'No description available')}\n{stock_status}\n\nWould you like to know more about this product?"
     
     def _is_recommendation_request(self, message: str) -> bool:
         """Check if the message is asking for product recommendations"""
@@ -241,19 +292,75 @@ class BotService:
         human_keywords = ["human", "agent", "person", "representative", "speak to someone", "talk to someone"]
         return any(keyword in message for keyword in human_keywords)
     
-    def _get_contextual_quick_actions(self, message: str, context_type: str, product_key: str = None) -> List[Dict[str, str]]:
+    def _handle_coupon_query(self, message: str) -> Tuple[str, Optional[Dict[str, Any]]]:
+        """Handle coupon-related queries"""
+        # Check if the user is asking for a specific coupon code
+        code_match = re.search(r'coupon\s+(?:code\s+)?([A-Za-z0-9]+)', message)
+        
+        if code_match:
+            # User is asking about a specific coupon code
+            code = code_match.group(1).upper()
+            coupon = self.coupon_service.get_coupon_by_code(code)
+            
+            if coupon:
+                reply = f"Yes, the coupon code '{code}' is valid! It gives you {coupon.discount}% off"
+                if coupon.description:
+                    reply += f" {coupon.description}"
+                if coupon.expires_at:
+                    expiry_date = coupon.expires_at.strftime("%Y-%m-%d")
+                    reply += f". This coupon expires on {expiry_date}."
+                else:
+                    reply += "."
+                
+                # Format coupon for the API response
+                formatted_coupon = {
+                    "code": coupon.code,
+                    "discount": coupon.discount,
+                    "description": coupon.description or "",
+                    "expires_at": coupon.expires_at.isoformat() if coupon.expires_at else None
+                }
+                
+                return reply, {"coupon": formatted_coupon}
+            else:
+                return f"I couldn't find a coupon with the code '{code}'. Let me show you our active coupons instead.", None
+        
+        # User is asking for available coupons
+        active_coupons = self.coupon_service.get_active_coupons()
+        reply = self.coupon_service.format_coupons_list(active_coupons)
+        
+        # Format coupons for the API response
+        formatted_coupons = []
+        for coupon in active_coupons:
+            formatted_coupons.append({
+                "code": coupon.code,
+                "discount": coupon.discount,
+                "description": coupon.description or "",
+                "expires_at": coupon.expires_at.isoformat() if coupon.expires_at else None
+            })
+        
+        return reply, {"coupons": formatted_coupons}
+    
+    def _get_contextual_quick_actions(self, message: str, context_type: str, product_name: str = None) -> List[Dict[str, str]]:
         """Get contextual quick action buttons based on the message and context"""
-        if context_type == "order":
+        if context_type == "coupon":
+            return [
+                {"label": "Use Coupon", "value": "How do I use a coupon?"},
+                {"label": "Coupon Restrictions", "value": "Are there any restrictions on coupons?"},
+                {"label": "Combine Coupons", "value": "Can I use multiple coupons together?"}
+            ]
+        elif context_type == "order":
             return [
                 {"label": "Track Another Order", "value": "Track another order"},
                 {"label": "Order Issues", "value": "I have an issue with my order"},
                 {"label": "Return Item", "value": "I want to return an item"}
             ]
         elif context_type == "product":
+            # If we have a product name, use it for the quick actions
+            product_name = product_name or "this product"
             return [
-                {"label": "Add to Cart", "value": f"Add {self.product_catalog[product_key]['name']} to cart"},
-                {"label": "See Similar Products", "value": f"Show me products similar to {self.product_catalog[product_key]['name']}"},
-                {"label": "Check Availability", "value": f"Is {self.product_catalog[product_key]['name']} in stock?"}
+                {"label": "Add to Cart", "value": f"Add {product_name} to cart"},
+                {"label": "See Similar Products", "value": f"Show me products similar to {product_name}"},
+                {"label": "Check Availability", "value": f"Is {product_name} in stock?"}
             ]
         elif context_type == "recommendation":
             return [

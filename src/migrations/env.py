@@ -15,9 +15,10 @@ from app.core.db.database import Base
 # access to the values within the .ini file in use.
 config = context.config
 
+# Use SQLite for local development
 config.set_main_option(
     "sqlalchemy.url",
-    f"{settings.POSTGRES_ASYNC_PREFIX}{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_SERVER}/{settings.POSTGRES_DB}",
+    "sqlite:///./app.db"
 )
 
 # Interpret the config file for Python logging.
@@ -69,25 +70,29 @@ def do_run_migrations(connection: Connection) -> None:
         context.run_migrations()
 
 
-async def run_async_migrations() -> None:
+def run_sync_migrations() -> None:
     """In this scenario we need to create an Engine and associate a connection with the context."""
+    from sqlalchemy import engine_from_config, pool
 
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection, target_metadata=target_metadata
+        )
 
-    await connectable.dispose()
+        with context.begin_transaction():
+            context.run_migrations()
 
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-
-    asyncio.run(run_async_migrations())
+    
+    run_sync_migrations()
 
 
 if context.is_offline_mode():

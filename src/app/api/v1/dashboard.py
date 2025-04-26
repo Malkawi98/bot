@@ -115,7 +115,7 @@ async def landing_page(request: Request):
     """
     return templates.TemplateResponse(request, "enhanced_landing.html")
 
-@router.get("/customer-support-bot", response_class=HTMLResponse)
+@router.get("/langgraph-chat-test", response_class=HTMLResponse)
 async def customer_support_bot(request: Request):
     """
     Customer-facing support bot interface

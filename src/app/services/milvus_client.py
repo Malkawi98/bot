@@ -5,7 +5,7 @@ import openai
 
 from app.core.config import settings
 
-MILVUS_HOST = "milvus"  # Docker service name from docker-compose
+MILVUS_HOST = "localhost"  # Use localhost for local development
 MILVUS_PORT = "19530"
 
 COLLECTION_NAME = "rag_embeddings"
