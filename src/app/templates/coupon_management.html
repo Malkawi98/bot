@@ -1,0 +1,317 @@
+{% extends "base_chat.html" %}
+
+{% block title %}E-Commerce Support Bot - Coupon Management{% endblock %}
+
+{% block styles %}
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+    .sidebar-active { background-color: rgba(17, 24, 39, 0.8); }
+    .transition-width { transition: width 0.3s ease-in-out; }
+</style>
+{% endblock %}
+
+{% block sidebar %}
+<div id="sidebar" class="bg-gray-900 text-white w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform md:relative md:translate-x-0 transition duration-200 ease-in-out z-20">
+    <div class="flex items-center justify-between px-4">
+        <div class="text-2xl font-semibold">
+            <span class="text-teal-400">E-Bot</span> Admin
+        </div>
+        <button id="closeSidebar" class="md:hidden rounded-lg focus:outline-none focus:shadow-outline p-1">
+            <i class="fas fa-times text-white text-lg"></i>
+        </button>
+    </div>
+    <nav class="mt-10">
+        <a href="/bot-config" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+            <i class="fas fa-cog mr-3"></i>Bot Configuration
+        </a>
+        <a href="/knowledge-base" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+            <i class="fas fa-book mr-3"></i>Knowledge Base
+        </a>
+        <a href="/product-management" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+            <i class="fas fa-shopping-cart mr-3"></i>Product Management
+        </a>
+        <a href="/coupon-management" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg sidebar-active">
+            <i class="fas fa-tag mr-3"></i>Coupon Management
+        </a>
+        <a href="/langgraph-chat-test" class="sidebar-item flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">
+            <i class="fas fa-project-diagram mr-3"></i>LangGraph Chat
+        </a>
+        <a href="/" class="flex items-center py-2 px-4 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg mt-10">
+            <i class="fas fa-home mr-3"></i>Back to Home
+        </a>
+    </nav>
+</div>
+{% endblock %}
+
+{% block main_content %}
+<header class="bg-white shadow-md py-4 px-4">
+    <div class="flex items-center justify-between">
+        <button id="openSidebar" class="md:hidden rounded-lg focus:outline-none focus:shadow-outline p-1">
+            <i class="fas fa-bars text-gray-800 text-lg"></i>
+        </button>
+        <div class="flex items-center space-x-4">
+            <span class="text-gray-700">Admin User</span>
+            <img class="h-8 w-8 rounded-full" src="https://ui-avatars.com/api/?name=Admin&background=0D8ABC&color=fff" alt="Admin">
+        </div>
+    </div>
+</header>
+
+<div id="coupon-content" class="container mx-auto px-4 py-6">
+    <h1 class="text-2xl font-semibold text-gray-800 mb-6">Coupon Management</h1>
+    <div class="grid grid-cols-1 gap-6">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Coupons</h2>
+                <button id="add-coupon-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg focus:outline-none">
+                    <i class="fas fa-plus mr-2"></i>Add Coupon
+                </button>
+            </div>
+            <div id="coupons-list" class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="py-3 px-4 text-left">ID</th>
+                            <th class="py-3 px-4 text-left">Code</th>
+                            <th class="py-3 px-4 text-right">Discount</th>
+                            <th class="py-3 px-4 text-left">Description</th>
+                            <th class="py-3 px-4 text-center">Active</th>
+                            <th class="py-3 px-4 text-center">Expires At</th>
+                            <th class="py-3 px-4 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="coupons-table-body">
+                        <tr>
+                            <td colspan="6" class="py-4 text-center text-gray-500">Loading coupons...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Coupon Modal -->
+<div id="coupon-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md">
+        <div class="flex justify-between items-center border-b px-6 py-4">
+            <h3 id="coupon-modal-title" class="text-xl font-semibold">Add New Coupon</h3>
+            <button id="close-coupon-modal" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="p-6">
+            <form id="coupon-form">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="coupon-code">Coupon Code*</label>
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="coupon-code" type="text" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="coupon-discount">Discount (% or $)*</label>
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="coupon-discount" type="number" step="0.01" min="0" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="coupon-description">Description</label>
+                    <textarea class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="coupon-description" rows="2"></textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="coupon-expires-at">Expires At</label>
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="coupon-expires-at" type="datetime-local">
+                </div>
+                <div class="mb-4 flex items-center">
+                    <input id="coupon-active" type="checkbox" class="mr-2" checked>
+                    <label for="coupon-active" class="text-gray-700 text-sm font-bold">Active</label>
+                </div>
+                <input type="hidden" id="coupon-id" value="">
+                <div class="flex justify-between">
+                    <button type="button" id="cancel-coupon" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Cancel</button>
+                    <button type="submit" id="save-coupon" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Save Coupon</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Modal elements
+    const couponModal = document.getElementById('coupon-modal');
+    const addCouponBtn = document.getElementById('add-coupon-btn');
+    const closeCouponModal = document.getElementById('close-coupon-modal');
+    const cancelCouponBtn = document.getElementById('cancel-coupon');
+    const couponForm = document.getElementById('coupon-form');
+    const couponsTableBody = document.getElementById('coupons-table-body');
+
+    // Open modal
+    addCouponBtn.addEventListener('click', function() {
+        couponModal.classList.remove('hidden');
+        couponForm.reset();
+    });
+    // Close modal
+    closeCouponModal.addEventListener('click', function() {
+        couponModal.classList.add('hidden');
+    });
+    cancelCouponBtn.addEventListener('click', function() {
+        couponModal.classList.add('hidden');
+    });
+
+    // Load coupons
+    async function loadCoupons() {
+        couponsTableBody.innerHTML = `<tr><td colspan="7" class="py-4 text-center text-gray-500">Loading coupons...</td></tr>`;
+        try {
+            const response = await fetch('/api/v1/coupon/');
+            const coupons = await response.json();
+            if (!Array.isArray(coupons) || coupons.length === 0) {
+                couponsTableBody.innerHTML = `<tr><td colspan="7" class="py-4 text-center text-gray-500">No coupons found.</td></tr>`;
+                return;
+            }
+            couponsTableBody.innerHTML = '';
+            coupons.forEach(coupon => {
+                couponsTableBody.innerHTML += `
+                    <tr>
+                        <td class="py-2 px-4">${coupon.id}</td>
+                        <td class="py-2 px-4">${coupon.code}</td>
+                        <td class="py-2 px-4 text-right">${coupon.discount}</td>
+                        <td class="py-2 px-4">${coupon.description || ''}</td>
+                        <td class="py-2 px-4 text-center">${coupon.is_active ? 'Yes' : 'No'}</td>
+                        <td class="py-2 px-4 text-center">${coupon.expires_at ? new Date(coupon.expires_at).toLocaleString() : ''}</td>
+                        <td class="py-2 px-4 text-center">
+                            <button class="edit-coupon text-blue-500 hover:text-blue-700 mr-2" data-id="${coupon.id}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="delete-coupon text-red-500 hover:text-red-700" data-id="${coupon.id}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            // Add event listeners to edit and delete buttons
+            document.querySelectorAll('.edit-coupon').forEach(button => {
+                button.addEventListener('click', editCoupon);
+            });
+            
+            document.querySelectorAll('.delete-coupon').forEach(button => {
+                button.addEventListener('click', deleteCoupon);
+            });
+        } catch (error) {
+            couponsTableBody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-red-500">Error loading coupons</td></tr>`;
+        }
+    }
+    loadCoupons();
+
+    // Handle coupon form submission
+    couponForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const couponId = document.getElementById('coupon-id').value.trim();
+        const code = document.getElementById('coupon-code').value.trim();
+        const discount = parseFloat(document.getElementById('coupon-discount').value);
+        const description = document.getElementById('coupon-description').value.trim();
+        const expiresAt = document.getElementById('coupon-expires-at').value;
+        const isActive = document.getElementById('coupon-active').checked;
+        const payload = {
+            code,
+            discount,
+            description,
+            is_active: isActive,
+            expires_at: expiresAt ? new Date(expiresAt).toISOString() : null
+        };
+        
+        try {
+            let url = '/api/v1/coupon/';
+            let method = 'POST';
+            
+            // If couponId exists, we're updating an existing coupon
+            if (couponId) {
+                url = `/api/v1/coupon/${couponId}`;
+                method = 'PUT';
+            }
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                const data = await response.json();
+                alert(data.detail || `Failed to ${couponId ? 'update' : 'create'} coupon`);
+                return;
+            }
+            
+            couponModal.classList.add('hidden');
+            document.getElementById('coupon-id').value = '';
+            document.getElementById('coupon-modal-title').textContent = 'Add New Coupon';
+            couponForm.reset();
+            loadCoupons();
+        } catch (error) {
+            alert(`Error ${couponId ? 'updating' : 'creating'} coupon`);
+        }
+    });
+    
+    // Edit coupon function
+    async function editCoupon(e) {
+        const couponId = e.currentTarget.getAttribute('data-id');
+        try {
+            const response = await fetch(`/api/v1/coupon/id/${couponId}`);
+            if (!response.ok) {
+                alert('Failed to fetch coupon details');
+                return;
+            }
+            
+            const coupon = await response.json();
+            
+            // Populate the form
+            document.getElementById('coupon-id').value = coupon.id;
+            document.getElementById('coupon-code').value = coupon.code;
+            document.getElementById('coupon-discount').value = coupon.discount;
+            document.getElementById('coupon-description').value = coupon.description || '';
+            document.getElementById('coupon-active').checked = coupon.is_active;
+            
+            if (coupon.expires_at) {
+                // Format the date for the input (YYYY-MM-DDThh:mm)
+                const expiryDate = new Date(coupon.expires_at);
+                const formattedDate = expiryDate.toISOString().slice(0, 16);
+                document.getElementById('coupon-expires-at').value = formattedDate;
+            } else {
+                document.getElementById('coupon-expires-at').value = '';
+            }
+            
+            // Update modal title
+            document.getElementById('coupon-modal-title').textContent = 'Edit Coupon';
+            
+            // Show the modal
+            couponModal.classList.remove('hidden');
+        } catch (error) {
+            alert('Error fetching coupon details');
+        }
+    }
+    
+    // Delete coupon function
+    async function deleteCoupon(e) {
+        if (!confirm('Are you sure you want to delete this coupon?')) {
+            return;
+        }
+        
+        const couponId = e.currentTarget.getAttribute('data-id');
+        try {
+            const response = await fetch(`/api/v1/coupon/${couponId}`, {
+                method: 'DELETE'
+            });
+            
+            if (!response.ok) {
+                alert('Failed to delete coupon');
+                return;
+            }
+            
+            loadCoupons();
+        } catch (error) {
+            alert('Error deleting coupon');
+        }
+    }
+});
+</script>
+{% endblock %} 
