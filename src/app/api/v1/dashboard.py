@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, status, Response, Form, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
 from typing import Dict, List, Optional, Any, Union
 from pydantic import BaseModel
 import os
@@ -14,8 +13,8 @@ from sqlalchemy.orm import Session
 from app.core.bot_settings import get_bot_settings, save_bot_settings, update_bot_settings, get_bot_settings_model
 from app.core.db.database import get_db
 
-# Use a single consistent template directory path for Docker compatibility
-templates = Jinja2Templates(directory="/code/app/templates")
+# Import templates from the centralized configuration
+from app.core.template_config import templates
 
 router = APIRouter(tags=["dashboard"])
 
@@ -176,21 +175,16 @@ async def knowledge_base(request: Request):
                 "tags": ["vector-store"]
             })
         
-        # If no entries found, use mock data as fallback
-        if not formatted_entries:
-            print("No entries found in vector store, using mock data as fallback")
-            formatted_entries = mock_product_entries
-        else:
-            print(f"Found {len(formatted_entries)} entries in vector store")
+        # Log the number of entries found
+        print(f"Found {len(formatted_entries)} entries in vector store")
     except Exception as e:
-        # If there's an error fetching from Milvus, use mock data as fallback
+        # If there's an error fetching from Milvus, log the error and return empty list
         import traceback
         print(f"Error fetching from vector store: {e}\n{traceback.format_exc()}")
-        print("Using mock data as fallback")
-        formatted_entries = mock_product_entries
+        formatted_entries = []
     
     return templates.TemplateResponse(request, "knowledge_base.html", {
-        "sources": mock_knowledge_sources,
+        "sources": [],  # No mock sources, will be loaded via JavaScript
         "entries": formatted_entries
     })
 

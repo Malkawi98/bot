@@ -59,11 +59,11 @@
                 <h1 class="text-2xl font-semibold text-gray-800 mb-6">Bot Configuration</h1>
                 
                 <div class="grid grid-cols-1 gap-6">
-                    <!-- Basic Settings -->
+                    <!-- Bot Settings -->
                     <div>
                         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
                             <h2 class="text-xl font-semibold mb-4">Bot Settings</h2>
-                            <form id="basic-settings-form" class="space-y-4">
+                            <form id="bot-settings-form" class="space-y-4">
                                 <div class="mb-4 relative">
                                     <label class="block text-gray-700 text-sm font-bold mb-2" for="bot-name">
                                         Bot Name
@@ -86,40 +86,51 @@
                                 </div>
                                 
                                 <div class="mb-4 relative">
-                                    <label class="block text-gray-700 text-sm font-bold mb-2">
-                                        Quick Actions
+                                    <label class="block text-gray-700 text-sm font-bold mb-2" for="response-time">
+                                        Response Time
                                     </label>
-                                    <div id="quick-actions-container">
-                                        <div class="flex items-center mb-2">
-                                            <input class="shadow appearance-none border rounded w-1/3 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2" type="text" placeholder="Label" value="Track Order">
-                                            <input class="shadow appearance-none border rounded w-1/2 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2" type="text" placeholder="Value" value="Track my order">
-                                            <button type="button" class="bg-red-500 text-white p-2 rounded hover:bg-red-600 delete-action">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                        <div class="flex items-center mb-2">
-                                            <input class="shadow appearance-none border rounded w-1/3 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2" type="text" placeholder="Label" value="Return Item">
-                                            <input class="shadow appearance-none border rounded w-1/2 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2" type="text" placeholder="Value" value="I want to return an item">
-                                            <button type="button" class="bg-red-500 text-white p-2 rounded hover:bg-red-600 delete-action">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                        <div class="flex items-center mb-2">
-                                            <input class="shadow appearance-none border rounded w-1/3 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2" type="text" placeholder="Label" value="Talk to Human">
-                                            <input class="shadow appearance-none border rounded w-1/2 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2" type="text" placeholder="Value" value="I want to talk to a human agent">
-                                            <button type="button" class="bg-red-500 text-white p-2 rounded hover:bg-red-600 delete-action">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <button type="button" id="add-action" class="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                                        <i class="fas fa-plus mr-1"></i> Add Quick Action
-                                    </button>
+                                    <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="response-time">
+                                        <option value="immediate">Immediate</option>
+                                        <option value="delayed">Delayed (typing indicator)</option>
+                                        <option value="variable">Variable (based on message length)</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-4 relative">
+                                    <label class="block text-gray-700 text-sm font-bold mb-2" for="language">
+                                        Primary Language
+                                    </label>
+                                    <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="language">
+                                        <option value="en">English</option>
+                                        <option value="es">Spanish</option>
+                                        <option value="fr">French</option>
+                                        <option value="de">German</option>
+                                        <option value="ar">Arabic</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-4 relative">
+                                    <label class="block text-gray-700 text-sm font-bold mb-2" for="tone">
+                                        Conversation Tone
+                                    </label>
+                                    <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="tone">
+                                        <option value="friendly">Friendly</option>
+                                        <option value="professional">Professional</option>
+                                        <option value="casual">Casual</option>
+                                        <option value="formal">Formal</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-4 relative">
+                                    <label class="block text-gray-700 text-sm font-bold mb-2" for="max-message-length">
+                                        Max Message Length
+                                    </label>
+                                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="max-message-length" type="number" value="500">
                                 </div>
                                 
                                 <div class="flex justify-between items-center mt-6">
-                                    <button type="submit" class="bg-teal-500 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                                        Save Settings
+                                    <button type="submit" class="bg-blue-500 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:shadow-outline text-lg font-bold shadow-md">
+                                        <i class="fas fa-save mr-2"></i> Save Settings
                                     </button>
                                     <div id="save-status" class="text-sm text-gray-500 hidden">Saving...</div>
                                 </div>
@@ -143,39 +154,6 @@
             sidebar.classList.add('-translate-x-full');
         });
         
-        // Initialize UI elements
-        const addActionBtn = document.getElementById('add-action');
-        const quickActionsContainer = document.getElementById('quick-actions-container');
-        const basicSettingsForm = document.getElementById('basic-settings-form');
-        const advancedSettingsForm = document.getElementById('advanced-settings-form');
-        
-        // Add quick action
-        addActionBtn.addEventListener('click', function() {
-            const actionDiv = document.createElement('div');
-            actionDiv.className = 'flex items-center mb-2';
-            actionDiv.innerHTML = `
-                <input type="text" class="action-label shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline w-1/3 mr-2" placeholder="Label">
-                <input type="text" class="action-value shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline w-2/3 mr-2" placeholder="Value">
-                <button type="button" class="delete-action bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline">
-                    <i class="fas fa-trash"></i>
-                </button>
-            `;
-            quickActionsContainer.appendChild(actionDiv);
-            
-            // Add event listener to delete button
-            actionDiv.querySelector('.delete-action').addEventListener('click', function() {
-                quickActionsContainer.removeChild(actionDiv);
-            });
-        });
-        
-        // Delete quick action - add event listeners to existing buttons
-        document.querySelectorAll('.delete-action').forEach(button => {
-            button.addEventListener('click', function() {
-                const actionDiv = this.closest('.flex');
-                actionDiv.parentNode.removeChild(actionDiv);
-            });
-        });
-        
         // Load bot configuration
         async function loadBotConfig() {
             try {
@@ -192,83 +170,58 @@
                 const data = await response.json();
                 console.log('Loaded bot settings:', data);
                 
-                // Set form values
+                // Populate settings form
                 document.getElementById('bot-name').value = data.bot_name || '';
                 document.getElementById('welcome-message').value = data.welcome_message || '';
                 document.getElementById('fallback-message').value = data.fallback_message || '';
                 
-                // Clear existing quick actions
-                quickActionsContainer.innerHTML = '';
-                
-                // Add quick actions
-                if (data.quick_actions && data.quick_actions.length > 0) {
-                    data.quick_actions.forEach(action => {
-                        const actionDiv = document.createElement('div');
-                        actionDiv.className = 'flex items-center mb-2';
-                        actionDiv.innerHTML = `
-                            <input type="text" class="action-label shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline w-1/3 mr-2" placeholder="Label" value="${action.label || ''}">
-                            <input type="text" class="action-value shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline w-2/3 mr-2" placeholder="Value" value="${action.value || ''}">
-                            <button type="button" class="delete-action bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        `;
-                        quickActionsContainer.appendChild(actionDiv);
-                        
-                        // Add event listener to delete button
-                        actionDiv.querySelector('.delete-action').addEventListener('click', function() {
-                            quickActionsContainer.removeChild(actionDiv);
-                        });
-                    });
-                }
-                
-                // Set advanced settings
+                // Populate advanced settings
                 if (data.advanced_settings) {
-                    document.getElementById('response-time').value = data.advanced_settings.response_time || 'immediate';
-                    document.getElementById('language').value = data.advanced_settings.language || 'en';
-                    document.getElementById('tone').value = data.advanced_settings.tone || 'friendly';
-                    document.getElementById('max-message-length').value = data.advanced_settings.max_message_length || 500;
+                    const advSettings = data.advanced_settings;
+                    if (document.getElementById('response-time')) {
+                        document.getElementById('response-time').value = advSettings.response_time || 'Immediate';
+                    }
+                    if (document.getElementById('language')) {
+                        document.getElementById('language').value = advSettings.language || 'English';
+                    }
+                    if (document.getElementById('tone')) {
+                        document.getElementById('tone').value = advSettings.tone || 'Friendly';
+                    }
+                    if (document.getElementById('max-message-length')) {
+                        document.getElementById('max-message-length').value = advSettings.max_message_length || 500;
+                    }
                 }
                 
                 saveStatus.classList.add('hidden');
                 
             } catch (error) {
                 console.error('Error loading bot configuration:', error);
-                showNotification('Error loading bot settings: ' + error.message, 'error');
+                showNotification('Error loading bot configuration: ' + error.message, 'error');
                 document.getElementById('save-status').classList.add('hidden');
             }
         }
         
-        // Save basic settings
-        basicSettingsForm.addEventListener('submit', async (e) => {
+        // Save all settings
+        document.getElementById('bot-settings-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const saveStatus = document.getElementById('save-status');
             saveStatus.textContent = 'Saving...';
             saveStatus.classList.remove('hidden');
             
-            // Get quick actions
-            const quickActions = [];
-            quickActionsContainer.querySelectorAll('div').forEach(div => {
-                const label = div.querySelector('.action-label').value;
-                const value = div.querySelector('.action-value').value;
-                if (label && value) {
-                    quickActions.push({ label, value });
-                }
-            });
-            
             // Get advanced settings
             const advancedSettings = {
-                response_time: document.getElementById('response-time')?.value || 'immediate',
-                language: document.getElementById('language')?.value || 'en',
-                tone: document.getElementById('tone')?.value || 'friendly',
-                max_message_length: parseInt(document.getElementById('max-message-length')?.value || '500')
+                response_time: document.getElementById('response-time').value,
+                language: document.getElementById('language').value,
+                tone: document.getElementById('tone').value,
+                max_message_length: parseInt(document.getElementById('max-message-length').value)
             };
             
             const data = {
                 bot_name: document.getElementById('bot-name').value,
                 welcome_message: document.getElementById('welcome-message').value,
                 fallback_message: document.getElementById('fallback-message').value,
-                quick_actions: quickActions,
+                quick_actions: [], // Empty array as we're removing quick actions
                 advanced_settings: advancedSettings
             };
             
@@ -298,49 +251,6 @@
                 showNotification('Error saving bot settings: ' + error.message, 'error');
             }
         });
-        
-        // Save advanced settings
-        if (advancedSettingsForm) {
-            advancedSettingsForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                const saveStatus = document.getElementById('save-status');
-                saveStatus.textContent = 'Saving...';
-                saveStatus.classList.remove('hidden');
-                
-                const advancedSettings = {
-                    response_time: document.getElementById('response-time').value,
-                    language: document.getElementById('language').value,
-                    tone: document.getElementById('tone').value,
-                    max_message_length: parseInt(document.getElementById('max-message-length').value)
-                };
-                
-                try {
-                    // Use the database-driven API endpoint with PUT method
-                    const response = await fetch('/api/v1/bot-settings', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            advanced_settings: advancedSettings
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`Error ${response.status}: ${response.statusText}`);
-                    }
-                    
-                    saveStatus.classList.add('hidden');
-                    showNotification('Advanced settings saved successfully');
-                    
-                } catch (error) {
-                    console.error('Error saving advanced settings:', error);
-                    saveStatus.classList.add('hidden');
-                    showNotification('Error saving advanced settings: ' + error.message, 'error');
-                }
-            });
-        }
         
         // Show notification
         function showNotification(message, type = 'success') {

@@ -76,12 +76,14 @@
                             <p class="text-xs text-gray-500 mt-1">Imported content will be automatically added to the vector store.</p>
                         </div>
                         
+
+                        
                         <!-- Upload file -->
                         <div>
                             <h3 class="font-medium text-gray-700 mb-2">Upload File</h3>
                             <div id="file-drop-area" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
-                                <input type="file" id="file-upload" class="hidden">
-                                <label for="file-upload" class="cursor-pointer">
+                                <input type="file" id="file-upload" class="hidden" accept=".pdf,.docx,.txt,.md,.csv">
+                                <label for="file-upload" class="cursor-pointer block w-full h-full">
                                     <div class="flex flex-col items-center justify-center">
                                         <i class="fas fa-cloud-upload-alt text-gray-400 text-3xl mb-2"></i>
                                         <p class="text-gray-700 mb-1">Drag & drop a file here, or click to browse</p>
@@ -89,16 +91,23 @@
                                     </div>
                                 </label>
                                 <p id="file-name" class="mt-2 text-sm text-blue-600 hidden"></p>
-                                <button id="upload-file-btn" class="mt-3 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg hidden">
-                                    Upload
-                                </button>
+                                <div class="mt-3 flex space-x-2 justify-center">
+                                    <button id="upload-file-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg hidden">
+                                        <i class="fas fa-upload mr-1"></i> Upload
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                     
                     <!-- Knowledge entries section (below import) -->
                     <div class="bg-white rounded-lg shadow-md p-6">
-                        <h2 class="text-xl font-semibold mb-4">Knowledge Entries</h2>
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-semibold">Knowledge Entries</h2>
+                            <button id="reset-vector-store-btn" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm flex items-center">
+                                <i class="fas fa-trash-alt mr-1"></i> Reset Vector Store
+                            </button>
+                        </div>
                         
                         <!-- Knowledge entries list -->
                         <div id="knowledge-entries-list" class="space-y-4">
@@ -106,18 +115,27 @@
                                 <div class="text-sm text-gray-600 mb-3">Total entries: {{ entries|length }}</div>
                                 
                                 {% for entry in entries %}
-                                    <div class="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow mb-3">
-                                        <div class="flex justify-between items-start">
-                                            <h3 class="font-semibold text-lg">{{ entry.name }}</h3>
+                                    <div class="entry bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow">
+                                    <div class="flex justify-between items-start">
+                                        <h3 class="font-semibold text-lg">Entry #{{ entry.id }}</h3>
+                                        <div class="flex space-x-1">
+                                            {% if entry.language == 'ar' %}
+                                            <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Arabic (العربية)</span>
+                                            {% else %}
+                                            <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">English</span>
+                                            {% endif %}
+                                            <button class="delete-entry-btn text-red-500 hover:text-red-700" data-id="{{ entry.id }}">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
                                         </div>
-                                        <div class="mt-2">
-                                            <p class="text-gray-700">{{ entry.content }}</p>
-                                        </div>
-                                        <div class="mt-3 flex flex-wrap gap-1">
-                                            {% for tag in entry.tags %}
-                                                <span class="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full">{{ tag }}</span>
-                                            {% endfor %}
-                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <p class="text-gray-700 truncate">{{ entry.text|truncate(150) }}</p>
+                                    </div>
+                                    <div class="mt-3 flex justify-between items-center">
+                                        <button class="view-entry-btn text-blue-500 hover:text-blue-700" data-id="{{ entry.id }}">
+                                            <i class="fas fa-eye mr-1"></i> View Full Content
+                                        </button>
                                     </div>
                                 {% endfor %}
                             {% else %}
@@ -134,12 +152,27 @@
                     <div id="vector-search-section" class="bg-white rounded-lg shadow-md p-6 hidden">
                         <h2 class="text-xl font-semibold text-gray-800 mb-4">Vector Store Search</h2>
                         <div class="mb-4">
+                            <div class="flex flex-col space-y-2">
                             <div class="flex">
                                 <input id="vector-search-input" class="shadow appearance-none border rounded-l w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" type="text" placeholder="Search the vector store...">
                                 <button id="execute-search-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-r focus:outline-none focus:shadow-outline">
                                     <i class="fas fa-search"></i>
                                 </button>
                             </div>
+                            <div class="flex items-center">
+                                <label class="flex items-center text-sm text-gray-600">
+                                    <input type="checkbox" id="search-all-languages" class="form-checkbox mr-2" checked>
+                                    Search across all languages
+                                </label>
+                                <div id="language-filter" class="ml-4 flex items-center" style="display: none;">
+                                    <label class="mr-2 text-sm text-gray-600">Filter by:</label>
+                                    <select id="search-language" class="text-sm border rounded py-1 px-2">
+                                        <option value="en">English</option>
+                                        <option value="ar">Arabic (العربية)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
                         </div>
                         <div id="vector-search-results" class="mt-4 space-y-4">
                             <!-- Search results will be displayed here -->
@@ -147,9 +180,18 @@
                         <div class="mt-6">
                             <h3 class="font-semibold text-gray-700 mb-2">Add New Content to Vector Store</h3>
                             <textarea id="vector-content-input" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" rows="4" placeholder="Enter content to add to the vector store..."></textarea>
-                            <button id="add-to-vector-store-btn" class="mt-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                                <i class="fas fa-plus mr-1"></i> Add to Vector Store
-                            </button>
+                            
+                            <div class="mt-2 flex items-center">
+                                <label class="mr-2 text-gray-700 text-sm font-bold">Language:</label>
+                                <select id="content-language" class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                                    <option value="en">English</option>
+                                    <option value="ar">Arabic (العربية)</option>
+                                </select>
+                                
+                                <button id="add-to-vector-store-btn" class="ml-auto bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                                    <i class="fas fa-plus mr-1"></i> Add to Vector Store
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -231,38 +273,51 @@
         
         // Entry search functionality
         const entrySearch = document.getElementById('entry-search');
-        entrySearch.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const entries = document.querySelectorAll('#entries-container .entry-item');
-            
-            entries.forEach(entry => {
-                const title = entry.querySelector('h3').textContent.toLowerCase();
-                const content = entry.querySelector('p').textContent.toLowerCase();
-                const tags = Array.from(entry.querySelectorAll('.tag')).map(tag => tag.textContent.toLowerCase());
+        if (entrySearch) {
+            entrySearch.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const entries = document.querySelectorAll('#knowledge-entries-list .entry');
                 
-                const isMatch = title.includes(searchTerm) || content.includes(searchTerm) || tags.some(tag => tag.includes(searchTerm));
-                entry.style.display = isMatch ? 'block' : 'none';
+                entries.forEach(entry => {
+                    const title = entry.querySelector('h3').textContent.toLowerCase();
+                    const content = entry.querySelector('p').textContent.toLowerCase();
+                    const tags = Array.from(entry.querySelectorAll('.tag')).map(tag => tag.textContent.toLowerCase());
+                    
+                    const isMatch = title.includes(searchTerm) || content.includes(searchTerm) || tags.some(tag => tag.includes(searchTerm));
+                    entry.style.display = isMatch ? 'block' : 'none';
+                });
             });
-        });
+        }
         
         // Load all entries from vector store
         async function loadVectorStoreEntries() {
             const entriesContainer = document.getElementById('knowledge-entries-list');
-            const loadingElement = document.getElementById('knowledge-entries-loading');
+            console.log('Starting to load vector store entries...');
+            
+            // Show loading indicator
+            entriesContainer.innerHTML = `
+                <div id="knowledge-entries-loading" class="text-center py-8">
+                    <i class="fas fa-circle-notch fa-spin text-blue-500 text-3xl mb-3"></i>
+                    <p class="text-gray-600">Loading knowledge entries...</p>
+                </div>
+            `;
             
             try {
+                console.log('Fetching vector store entries...');
                 // Fetch all entries from vector store API
                 const response = await fetch('/api/v1/vector-store/all');
                 
                 if (!response.ok) {
-                    throw new Error('Failed to load knowledge entries');
+                    throw new Error(`Failed to load knowledge entries: ${response.status} ${response.statusText}`);
                 }
                 
                 const data = await response.json();
+                console.log('Received vector store data:', data);
                 
-                // Remove loading indicator
-                if (loadingElement) {
-                    loadingElement.remove();
+                // Check for any error messages
+                if (!data.success && data.message) {
+                    console.error('Error from API:', data.message);
+                    throw new Error(data.message);
                 }
                 
                 // Display knowledge entries
@@ -271,15 +326,21 @@
                     
                     data.entries.forEach((entry, index) => {
                         const entryElement = document.createElement('div');
-                        entryElement.className = 'border-b border-gray-200 py-3 hover:bg-gray-50 transition-colors';
+                        entryElement.className = 'bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow';
+                        
+                        // Check if entry.text exists to avoid errors
+                        const entryText = entry.text || entry.content || '';
                         
                         // Truncate text if it's too long
-                        const truncatedText = entry.text.length > 150 ? entry.text.substring(0, 150) + '...' : entry.text;
+                        const truncatedText = entryText.length > 150 ? entryText.substring(0, 150) + '...' : entryText;
                         
                         entryElement.innerHTML = `
                             <div>
-                                <h3 class="font-medium text-gray-800">Entry #${entry.id || index + 1}</h3>
-                                <p class="text-sm text-gray-600">${truncatedText}</p>
+                                <h3 class="font-medium text-gray-800 flex items-center">
+                                    <i class="fas fa-file-alt text-blue-500 mr-2"></i>
+                                    Entry #${entry.id || index + 1}
+                                </h3>
+                                <p class="text-sm text-gray-600 mt-1">${truncatedText}</p>
                             </div>
                         `;
                         
@@ -290,20 +351,42 @@
                         
                         entriesContainer.appendChild(entryElement);
                     });
+                    
+                    // Add a refresh button
+                    const refreshButton = document.createElement('button');
+                    refreshButton.className = 'mt-4 bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 flex items-center justify-center w-full';
+                    refreshButton.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> Refresh Entries';
+                    refreshButton.addEventListener('click', () => loadVectorStoreEntries());
+                    entriesContainer.appendChild(refreshButton);
+                    
                 } else {
-                    entriesContainer.innerHTML = '<div class="text-center py-4 text-gray-500">No knowledge entries found. Import knowledge to get started.</div>';
+                    entriesContainer.innerHTML = `
+                        <div class="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                            <i class="fas fa-database text-gray-400 text-3xl mb-3"></i>
+                            <p class="text-gray-600 mb-4">No knowledge entries found.</p>
+                            <p class="text-sm text-gray-500">Import knowledge from a URL or upload a file to get started.</p>
+                        </div>
+                    `;
                 }
                 
             } catch (error) {
                 console.error('Error loading knowledge entries:', error);
                 
-                if (loadingElement) {
-                    loadingElement.innerHTML = `<div class="text-center py-4 text-red-500">Error: ${error.message}</div>`;
-                } else {
-                    entriesContainer.innerHTML = `<div class="text-center py-4 text-red-500">Error: ${error.message}</div>`;
-                }
+                entriesContainer.innerHTML = `
+                    <div class="text-center py-8 bg-red-50 rounded-lg border border-red-200">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-3xl mb-3"></i>
+                        <p class="text-red-600 mb-2">Error loading knowledge entries</p>
+                        <p class="text-sm text-red-500">${error.message}</p>
+                        <button id="retry-load-btn" class="mt-4 bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200">
+                            <i class="fas fa-redo mr-2"></i> Retry
+                        </button>
+                    </div>
+                `;
                 
-                showNotification('Error loading knowledge entries', 'error');
+                // Add retry button functionality
+                document.getElementById('retry-load-btn')?.addEventListener('click', loadVectorStoreEntries);
+                
+                showNotification('Error loading knowledge entries: ' + error.message, 'error');
             }
         }
         
@@ -343,69 +426,127 @@
         }
         
         // Import URL
-        document.getElementById('import-url-btn').addEventListener('click', async () => {
-            const urlInput = document.getElementById('import-url');
-            const url = urlInput.value.trim();
-            
-            if (!url) {
-                showNotification('Please enter a valid URL', 'error');
-                return;
-            }
-            
-            try {
-                // Show loading state
-                const importBtn = document.getElementById('import-url-btn');
-                const originalBtnText = importBtn.innerHTML;
-                importBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
-                importBtn.disabled = true;
+        const importUrlBtn = document.getElementById('import-url-btn');
+        if (importUrlBtn) {
+            importUrlBtn.addEventListener('click', async () => {
+                const urlInput = document.getElementById('import-url');
+                if (!urlInput) return;
                 
-                // Create form data
-                const formData = new FormData();
-                formData.append('url', url);
+                const url = urlInput.value.trim();
                 
-                // Call the RAG context API
-                const response = await fetch('/api/v1/rag/context', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to import URL');
+                if (!url) {
+                    showNotification('Please enter a valid URL', 'error');
+                    return;
                 }
                 
-                const data = await response.json();
+                try {
+                    // Show loading state
+                    const originalBtnText = importUrlBtn.innerHTML;
+                    importUrlBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+                    importUrlBtn.disabled = true;
+                    
+                    // Create form data
+                    const formData = new FormData();
+                    formData.append('url', url);
+                    
+                    // Call the RAG context API
+                    const response = await fetch('/api/v1/rag/context', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    // Parse the response JSON even if it's an error
+                    const responseData = await response.json();
+                    
+                    if (!response.ok) {
+                        // Get the error message from the response if available
+                        const errorMessage = responseData.detail || 'Failed to import URL';
+                        throw new Error(errorMessage);
+                    }
                 
-                // Reset button
-                importBtn.innerHTML = originalBtnText;
-                importBtn.disabled = false;
-                
-                // Show success message
-                showNotification('URL imported successfully');
-                urlInput.value = '';
-                
-                // Refresh vector store entries
-                loadVectorStoreEntries();
-                
-            } catch (error) {
-                console.error('Error importing URL:', error);
-                importBtn.innerHTML = 'Import';
-                importBtn.disabled = false;
-                showNotification('Error importing URL: ' + error.message, 'error');
-            }
+                    // Reset button
+                    importUrlBtn.innerHTML = originalBtnText;
+                    importUrlBtn.disabled = false;
+                    
+                    // Show success message
+                    showNotification('URL imported successfully');
+                    urlInput.value = '';
+                    
+                    // Refresh vector store entries
+                    setTimeout(() => {
+                        loadVectorStoreEntries();
+                    }, 1000); // Give the server a moment to process the data
+                    
+                } catch (error) {
+                    console.error('Error importing URL:', error);
+                    importUrlBtn.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i> Import';
+                    importUrlBtn.disabled = false;
+                    showNotification('Error importing URL: ' + error.message, 'error');
+                }
+            });
+        }
+        
+        // File upload handling with drag and drop
+        const fileDropArea = document.getElementById('file-drop-area');
+        const fileInput = document.getElementById('file-upload');
+        
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileDropArea.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
         });
         
-        // File upload handling
-        document.getElementById('file-upload').addEventListener('change', (e) => {
-            const file = e.target.files[0];
+        // Highlight drop area when item is dragged over it
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileDropArea.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileDropArea.addEventListener(eventName, unhighlight, false);
+        });
+        
+        // Handle dropped files
+        fileDropArea.addEventListener('drop', handleDrop, false);
+        
+        // Handle file selection via input
+        fileInput.addEventListener('change', handleFiles, false);
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        function highlight() {
+            fileDropArea.classList.add('border-blue-500');
+            fileDropArea.classList.add('bg-blue-50');
+        }
+        
+        function unhighlight() {
+            fileDropArea.classList.remove('border-blue-500');
+            fileDropArea.classList.remove('bg-blue-50');
+        }
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length) {
+                fileInput.files = files;
+                handleFiles();
+            }
+        }
+        
+        function handleFiles() {
+            const file = fileInput.files[0];
             if (file) {
                 const fileNameDiv = document.getElementById('file-name');
                 fileNameDiv.textContent = `Selected file: ${file.name}`;
                 fileNameDiv.classList.remove('hidden');
                 
-                // Show the upload button when a file is selected
+                // Show both buttons when a file is selected
                 document.getElementById('upload-file-btn').classList.remove('hidden');
+                document.getElementById('process-import-btn').classList.remove('hidden');
             }
-        });
+        }
         
         // Upload file button handling
         document.getElementById('upload-file-btn').addEventListener('click', async () => {
@@ -436,12 +577,18 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showNotification('File uploaded successfully!', 'success');
+                    showNotification('File uploaded successfully!');
                     // Reset the file input
                     fileInput.value = '';
                     document.getElementById('file-name').classList.add('hidden');
-                    // Reload vector store entries to show the new content
-                    loadVectorStoreEntries();
+                    document.getElementById('upload-file-btn').classList.add('hidden');
+                    document.getElementById('process-import-btn').classList.add('hidden');
+                    
+                    // Wait a moment for the background processing to complete
+                    setTimeout(() => {
+                        // Reload vector store entries to show the new content
+                        loadVectorStoreEntries();
+                    }, 2000); // Wait 2 seconds before refreshing
                 } else {
                     showNotification(`Error uploading file: ${data.detail || 'Unknown error'}`, 'error');
                 }
@@ -507,8 +654,16 @@
                         showNotification('File imported successfully');
                         fileInput.value = '';
                         document.getElementById('file-name').classList.add('hidden');
-                        // Reload knowledge sources to show updated counts
-                        loadKnowledgeSources();
+                        document.getElementById('upload-file-btn').classList.add('hidden');
+                        document.getElementById('process-import-btn').classList.add('hidden');
+                        
+                        // Wait a moment for the background processing to complete
+                        setTimeout(() => {
+                            // Reload vector store entries to show the new content
+                            loadVectorStoreEntries();
+                            // Also reload knowledge sources to show updated counts
+                            loadKnowledgeSources();
+                        }, 2000); // Wait 2 seconds before refreshing
                     } else {
                         showNotification(addResult.message || 'Failed to add content to vector store', 'error');
                     }
@@ -525,16 +680,20 @@
             }
         });
         
+        // Get source form if it exists
+        const sourceForm = document.getElementById('source-form');
+        
         // Create a new knowledge source
-        sourceForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const data = {
-                name: document.getElementById('source-name').value,
-                description: document.getElementById('source-description').value,
-                source_type: document.getElementById('source-type').value,
-                url: document.getElementById('source-url').value || undefined
-            };
+        if (sourceForm) {
+            sourceForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const data = {
+                    name: document.getElementById('source-name').value,
+                    description: document.getElementById('source-description').value,
+                    source_type: document.getElementById('source-type').value,
+                    url: document.getElementById('source-url').value || undefined
+                };
             
             try {
                 const response = await fetch('/api/v1/knowledge-sources', {
@@ -565,51 +724,57 @@
                 showNotification('Error creating knowledge source', 'error');
             }
         });
+        }
+        
+        // Get entry form if it exists
+        const entryForm = document.getElementById('entry-form');
         
         // Create a new knowledge entry
-        entryForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const tagsInput = document.getElementById('entry-tags').value;
-            const tags = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag);
-            
-            const data = {
-                source_id: document.getElementById('entry-source-id').value,
-                title: document.getElementById('entry-title').value,
-                content: document.getElementById('entry-content').value,
-                tags: tags
-            };
-            
-            try {
-                const response = await fetch('/api/v1/knowledge-entries', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                });
+        if (entryForm) {
+            entryForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
                 
-                if (!response.ok) {
-                    throw new Error('Failed to create knowledge entry');
+                const tagsInput = document.getElementById('entry-tags').value;
+                const tags = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag);
+            
+                const data = {
+                    source_id: document.getElementById('entry-source-id').value,
+                    title: document.getElementById('entry-title').value,
+                    content: document.getElementById('entry-content').value,
+                    tags: tags
+                };
+            
+                try {
+                    const response = await fetch('/api/v1/knowledge-entries', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to create knowledge entry');
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showNotification('Knowledge entry created successfully');
+                        entryModal.classList.add('hidden');
+                        entryForm.reset();
+                        loadKnowledgeEntries(selectedSourceId);
+                        loadKnowledgeSources(); // Refresh sources to update entry count
+                    } else {
+                        showNotification(result.message || 'Failed to create knowledge entry', 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error creating knowledge entry:', error);
+                    showNotification('Error creating knowledge entry', 'error');
                 }
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showNotification('Knowledge entry created successfully');
-                    entryModal.classList.add('hidden');
-                    entryForm.reset();
-                    loadKnowledgeEntries(selectedSourceId);
-                    loadKnowledgeSources(); // Refresh sources to update entry count
-                } else {
-                    showNotification(result.message || 'Failed to create knowledge entry', 'error');
-                }
-                
-            } catch (error) {
-                console.error('Error creating knowledge entry:', error);
-                showNotification('Error creating knowledge entry', 'error');
-            }
-        });
+            });
+        }
         
         // Delete a knowledge source
         async function deleteKnowledgeSource(sourceId) {
@@ -693,38 +858,110 @@
         }
         
         // Toggle URL input based on source type
-        document.getElementById('source-type').addEventListener('change', (e) => {
-            const urlField = document.getElementById('url-field');
-            if (e.target.value === 'url') {
-                urlField.classList.remove('hidden');
-            } else {
-                urlField.classList.add('hidden');
-            }
-        });
+        const sourceTypeSelect = document.getElementById('source-type');
+        if (sourceTypeSelect) {
+            sourceTypeSelect.addEventListener('change', (e) => {
+                const urlField = document.getElementById('url-field');
+                if (urlField) {
+                    if (e.target.value === 'url') {
+                        urlField.classList.remove('hidden');
+                    } else {
+                        urlField.classList.add('hidden');
+                    }
+                }
+            });
+        }
+        
+        // Initialize modal elements
+        const sourceModal = document.getElementById('source-modal');
+        const entryModal = document.getElementById('entry-modal');
+        
+        // Initialize reset button
+        const resetVectorStoreBtn = document.getElementById('reset-vector-store-btn');
+        if (resetVectorStoreBtn) {
+            resetVectorStoreBtn.addEventListener('click', async () => {
+                if (confirm('Are you sure you want to reset the vector store? This will delete all embeddings and cannot be undone.')) {
+                    try {
+                        resetVectorStoreBtn.disabled = true;
+                        resetVectorStoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Resetting...';
+                        
+                        const response = await fetch('/api/v1/vector-store/reset', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Failed to reset vector store');
+                        }
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            showNotification('Vector store has been reset successfully');
+                            // Refresh the entries list
+                            loadVectorStoreEntries();
+                        } else {
+                            showNotification(result.message || 'Failed to reset vector store', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error resetting vector store:', error);
+                        showNotification('Error resetting vector store: ' + error.message, 'error');
+                    } finally {
+                        resetVectorStoreBtn.disabled = false;
+                        resetVectorStoreBtn.innerHTML = '<i class="fas fa-trash-alt mr-1"></i> Reset Vector Store';
+                    }
+                }
+            });
+        }
+        
+
+        
+        // Initialize vector search elements
+        const vectorSearchBtn = document.getElementById('vector-search-btn');
+        const vectorSearchSection = document.getElementById('vector-search-section');
+        const executeSearchBtn = document.getElementById('execute-search-btn');
+        const vectorSearchInput = document.getElementById('vector-search-input');
+        const vectorSearchResults = document.getElementById('vector-search-results');
+        const vectorContentInput = document.getElementById('vector-content-input');
+        const addToVectorStoreBtn = document.getElementById('add-to-vector-store-btn');
         
         // Vector Store Search functionality
-        vectorSearchBtn.addEventListener('click', () => {
-            // Toggle vector search section
-            if (vectorSearchSection.classList.contains('hidden')) {
-                vectorSearchSection.classList.remove('hidden');
-                vectorSearchBtn.classList.add('bg-blue-700');
-                vectorSearchBtn.classList.remove('bg-blue-500');
-            } else {
-                vectorSearchSection.classList.add('hidden');
-                vectorSearchBtn.classList.remove('bg-blue-700');
-                vectorSearchBtn.classList.add('bg-blue-500');
-            }
-        });
+        if (vectorSearchBtn && vectorSearchSection) {
+            vectorSearchBtn.addEventListener('click', () => {
+                // Toggle vector search section
+                if (vectorSearchSection.classList.contains('hidden')) {
+                    vectorSearchSection.classList.remove('hidden');
+                    vectorSearchBtn.classList.add('bg-blue-700');
+                    vectorSearchBtn.classList.remove('bg-blue-500');
+                } else {
+                    vectorSearchSection.classList.add('hidden');
+                    vectorSearchBtn.classList.remove('bg-blue-700');
+                    vectorSearchBtn.classList.add('bg-blue-500');
+                }
+            });
+        }
         
         // Execute vector search
-        executeSearchBtn.addEventListener('click', executeVectorSearch);
-        vectorSearchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                executeVectorSearch();
-            }
-        });
+        if (executeSearchBtn) {
+            executeSearchBtn.addEventListener('click', executeVectorSearch);
+        }
+        
+        if (vectorSearchInput) {
+            vectorSearchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    executeVectorSearch();
+                }
+            });
+        }
         
         async function executeVectorSearch() {
+            if (!vectorSearchInput || !vectorSearchResults) {
+                console.error('Vector search elements not found');
+                return;
+            }
+            
             const query = vectorSearchInput.value.trim();
             if (!query) {
                 showNotification('Please enter a search query', 'error');
@@ -778,46 +1015,53 @@
         }
         
         // Add content to vector store
-        addToVectorStoreBtn.addEventListener('click', async () => {
-            const content = vectorContentInput.value.trim();
-            if (!content) {
-                showNotification('Please enter content to add', 'error');
-                return;
-            }
+        if (addToVectorStoreBtn && vectorContentInput) {
+            addToVectorStoreBtn.addEventListener('click', async () => {
+                const content = vectorContentInput.value.trim();
+                if (!content) {
+                    showNotification('Please enter content to add', 'error');
+                    return;
+                }
             
-            try {
-                // Call the API to add content to the vector store
-                const response = await fetch('/api/v1/vector-store/add', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ text: content })
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to add content to vector store');
-                }
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showNotification('Content added to vector store successfully');
-                    vectorContentInput.value = '';
+                try {
+                    const language = document.getElementById('content-language').value;
+                    showNotification(`Adding ${language === 'ar' ? 'Arabic' : 'English'} content to vector store...`, 'info');
                     
-                    // If there's a search query, refresh the search results
-                    if (vectorSearchInput.value.trim()) {
-                        executeVectorSearch();
+                    const response = await fetch('/api/v1/vector-store/add', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ 
+                            text: content,
+                            language: language
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to add content to vector store');
                     }
-                } else {
-                    showNotification(result.message || 'Failed to add content to vector store', 'error');
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showNotification('Content added to vector store successfully');
+                        vectorContentInput.value = '';
+                        
+                        // If there's a search query, refresh the search results
+                        if (vectorSearchInput && vectorSearchInput.value.trim()) {
+                            executeVectorSearch();
+                        }
+                    } else {
+                        showNotification(result.message || 'Failed to add content to vector store', 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error adding content to vector store:', error);
+                    showNotification('Error adding content to vector store', 'error');
                 }
-                
-            } catch (error) {
-                console.error('Error adding content to vector store:', error);
-                showNotification('Error adding content to vector store', 'error');
-            }
-        });
+            });
+        }
         
         // Initialize knowledge sources on page load
         async function loadKnowledgeSources() {
@@ -1172,10 +1416,18 @@
                 const entryElement = document.createElement('div');
                 entryElement.className = 'bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow mb-3';
                 
+                // Add language badge
+                const languageBadge = entry.language === 'ar' ? 
+                    `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Arabic (العربية)</span>` : 
+                    `<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">English</span>`;
+                
                 entryElement.innerHTML = `
                     <div class="flex justify-between items-start">
                         <h3 class="font-semibold text-lg">${entry.title}</h3>
-                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Mock Data</span>
+                        <div class="flex space-x-1">
+                            ${languageBadge}
+                            <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Mock Data</span>
+                        </div>
                     </div>
                     <div class="mt-2">
                         <p class="text-gray-700">${entry.content}</p>

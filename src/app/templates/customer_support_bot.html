@@ -1,137 +1,207 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customer Support Bot</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background: #f8f9fa; }
-        .chat-container { max-width: 500px; margin: 40px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .chat-messages { height: 350px; overflow-y: auto; padding: 20px; border-bottom: 1px solid #eee; }
-        .chat-input { display: flex; padding: 15px; }
-        .chat-input input { flex: 1; margin-right: 10px; }
-        .bot-message { background: #e9ecef; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; }
-        .user-message { background: #0d6efd; color: #fff; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; align-self: flex-end; }
-        .quick-actions { padding: 10px 20px; border-bottom: 1px solid #eee; }
-        .quick-actions button { margin-right: 8px; margin-bottom: 5px; }
-    </style>
-</head>
-<body>
-<div class="chat-container">
-    <div class="quick-actions" id="quick-actions">
-        <!-- Quick action buttons will be inserted here -->
+{% extends "base_chat.html" %}
+
+{% block title %}Customer Support Bot{% endblock %}
+
+{% block main_content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-semibold text-gray-800 text-center">Customer Support Chat</h1>
+            <div class="language-selector">
+                <select id="language-selector" class="border rounded px-2 py-1 text-sm">
+                    <option value="en">English</option>
+                    <option value="ar">العربية</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex flex-col h-[500px]">
+            <!-- Chat Messages Area -->
+            <div id="chat-messages" class="flex-1 overflow-y-auto mb-4 space-y-4 p-2 bg-gray-50 rounded">
+                <!-- Bot welcome message -->
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 mr-3">
+                        <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0-1.104.896-2 2-2s2 .896 2 2-.896 2-2 2-2-.896-2-2zm-6 8v-1a4 4 0 014-4h4a4 4 0 014 4v1" /></svg>
+                        </div>
+                    </div>
+                    <div class="chat-bubble-bot p-3 max-w-3xl bg-blue-50 rounded-lg">
+                        <p>Hello! I'm your support assistant. How can I help you today?</p>
+                        <div class="mt-2 flex flex-wrap gap-2" id="initial-quick-actions">
+                            <button type="button" class="quick-action-btn bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full">Track Order</button>
+                            <button type="button" class="quick-action-btn bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full">Return Item</button>
+                            <button type="button" class="quick-action-btn bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full">Talk to Human</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Chat Input Area -->
+            <div class="border-t pt-4">
+                <form id="chat-form" class="flex">
+                    <input type="text" id="message-input" class="flex-1 border rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Type your message here...">
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white rounded-r-lg px-4 py-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                    </button>
+                </form>
+            </div>
+            <!-- Typing Indicator -->
+            <div id="typing-indicator" class="mt-2" style="display:none;">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white mr-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0-1.104.896-2 2-2s2 .896 2 2-.896 2-2 2-2-.896-2-2zm-6 8v-1a4 4 0 014-4h4a4 4 0 014 4v1" /></svg>
+                    </div>
+                    <div class="typing-indicator"><span class="animate-pulse">.</span><span class="animate-pulse">.</span><span class="animate-pulse">.</span></div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="chat-messages d-flex flex-column" id="chat-messages">
-        <!-- Chat messages will appear here -->
-    </div>
-    <form class="chat-input" id="chat-form">
-        <input type="text" class="form-control" id="user-input" placeholder="Type your message..." autocomplete="off" required>
-        <button class="btn btn-primary" type="submit">Send</button>
-        <button class="btn btn-outline-danger ms-2" type="button" id="reset-btn">Start Over</button>
-    </form>
-    <div id="typing-indicator" style="display:none; padding: 0 15px 10px 15px; color: #888; font-style: italic;">Bot is typing...</div>
 </div>
+{% endblock %}
+
+{% block scripts %}
 <script>
 const chatMessages = document.getElementById('chat-messages');
 const chatForm = document.getElementById('chat-form');
-const userInput = document.getElementById('user-input');
-const quickActions = document.getElementById('quick-actions');
-const resetBtn = document.getElementById('reset-btn');
+const messageInput = document.getElementById('message-input');
 const typingIndicator = document.getElementById('typing-indicator');
+const languageSelector = document.getElementById('language-selector');
 
-let chatHistory = [];
+// Current language
+let currentLanguage = 'en';
 
-function appendMessage(text, sender) {
-    const msg = document.createElement('div');
-    msg.className = sender === 'user' ? 'user-message align-self-end' : 'bot-message align-self-start';
-    msg.textContent = text;
-    chatMessages.appendChild(msg);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-    chatHistory.push({ sender, text });
-    // Show download button if bot message contains 'download your chat history'
-    if (sender === 'bot' && text.toLowerCase().includes('download your chat history')) {
-        showDownloadButton();
+// Translations for UI elements
+const translations = {
+    en: {
+        welcomeMessage: "Hello! I'm your support assistant. How can I help you today?",
+        trackOrder: "Track Order",
+        returnItem: "Return Item",
+        talkToHuman: "Talk to Human",
+        inputPlaceholder: "Type your message here...",
+        errorMessage: "Sorry, there was an error processing your request."
+    },
+    ar: {
+        welcomeMessage: "مرحباً! أنا مساعد الدعم الخاص بك. كيف يمكنني مساعدتك اليوم؟",
+        trackOrder: "تتبع الطلب",
+        returnItem: "إرجاع منتج",
+        talkToHuman: "التحدث مع موظف",
+        inputPlaceholder: "اكتب رسالتك هنا...",
+        errorMessage: "عذراً، حدث خطأ أثناء معالجة طلبك."
+    }
+};
+
+// Update UI language
+function updateLanguage(lang) {
+    currentLanguage = lang;
+    document.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    
+    // Update placeholder text
+    messageInput.placeholder = translations[lang].inputPlaceholder;
+    
+    // Update initial quick actions if they exist
+    const initialActions = document.getElementById('initial-quick-actions');
+    if (initialActions) {
+        const buttons = initialActions.querySelectorAll('button');
+        if (buttons.length >= 3) {
+            buttons[0].textContent = translations[lang].trackOrder;
+            buttons[1].textContent = translations[lang].returnItem;
+            buttons[2].textContent = translations[lang].talkToHuman;
+        }
+    }
+    
+    // Apply RTL-specific styles if Arabic
+    if (lang === 'ar') {
+        document.body.classList.add('rtl');
+    } else {
+        document.body.classList.remove('rtl');
     }
 }
 
-function setQuickActions(actions) {
-    quickActions.innerHTML = '';
-    actions.forEach(action => {
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-outline-secondary btn-sm';
-        btn.textContent = action.label;
+// Handle quick action buttons
+function handleQuickActions() {
+    document.querySelectorAll('.quick-action-btn').forEach(btn => {
         btn.onclick = (e) => {
-            e.preventDefault();
-            sendMessage(action.value);
+            if (e) e.preventDefault();
+            const message = btn.textContent.trim();
+            messageInput.value = '';
+            sendMessage(message);
         };
-        quickActions.appendChild(btn);
     });
 }
+handleQuickActions();
 
-function showDownloadButton() {
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-success btn-sm mt-2';
-    btn.textContent = 'Download Chat';
-    btn.onclick = downloadChat;
-    quickActions.appendChild(btn);
+// Add message to chat
+function addMessage(type, content, quickActions=[]) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'flex items-start';
+    let avatar, bubbleClass;
+    if (type === 'user') {
+        messageDiv.className += ' justify-end';
+        avatar = `<div class="flex-shrink-0 ml-3"><div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-700"><svg xmlns='http://www.w3.org/2000/svg' class='h-5 w-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 13l4 4L19 7' /></svg></div></div>`;
+        bubbleClass = 'chat-bubble-user bg-gray-100 rounded-lg';
+    } else {
+        avatar = `<div class="flex-shrink-0 mr-3"><div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white"><svg xmlns='http://www.w3.org/2000/svg' class='h-5 w-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 11c0-1.104.896-2 2-2s2 .896 2 2-.896 2-2 2-2-.896-2-2zm-6 8v-1a4 4 0 014-4h4a4 4 0 014 4v1' /></svg></div></div>`;
+        bubbleClass = 'chat-bubble-bot bg-blue-50 rounded-lg';
+    }
+    let quickActionsHtml = '';
+    if (quickActions.length > 0) {
+        quickActionsHtml = `<div class='mt-2 flex flex-wrap gap-2'>${quickActions.map(qa => `<button type='button' class='quick-action-btn bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs px-3 py-1 rounded-full'>${qa.label}</button>`).join('')}</div>`;
+    }
+    if (type === 'user') {
+        messageDiv.innerHTML = `<div class='${bubbleClass} p-3 max-w-xl'><p>${content}</p></div>${avatar}`;
+    } else {
+        messageDiv.innerHTML = `${avatar}<div class='${bubbleClass} p-3 max-w-3xl'><p>${content}</p>${quickActionsHtml}</div>`;
+    }
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    handleQuickActions();
 }
 
-function downloadChat() {
-    let text = chatHistory.map(m => `${m.sender === 'user' ? 'You' : 'Bot'}: ${m.text}`).join('\n');
-    const blob = new Blob([text], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'chat_history.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
-resetBtn.onclick = () => {
-    chatMessages.innerHTML = '';
-    chatHistory = [];
-    setQuickActions([
-        { label: 'Track Order', value: 'Track my order' },
-        { label: 'Return Item', value: 'I want to return an item' },
-        { label: 'Talk to Human', value: 'I want to talk to a human agent' }
-    ]);
-    appendMessage('Hello! I\'m your support assistant. How can I help you today?', 'bot');
-    document.cookie = 'session_id=; Max-Age=0; path=/;'; // Clear session cookie
-};
-
-async function sendMessage(message) {
-    appendMessage(message, 'user');
-    userInput.value = '';
-    setQuickActions([]);
+// Add typing indicator
+function addTypingIndicator() {
     typingIndicator.style.display = 'block';
-    const response = await fetch('/api/bot/message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message })
-    });
-    const data = await response.json();
+}
+function removeTypingIndicator() {
     typingIndicator.style.display = 'none';
-    appendMessage(data.reply, 'bot');
-    if (data.quick_actions) setQuickActions(data.quick_actions);
 }
 
-chatForm.onsubmit = e => {
-    e.preventDefault();
-    if (userInput.value.trim()) sendMessage(userInput.value.trim());
-};
+// Send message
+async function sendMessage(message) {
+    addMessage('user', message);
+    addTypingIndicator();
+    messageInput.value = '';
+    try {
+        const response = await fetch('/api/v2/bot/test-knowledge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                message,
+                language: currentLanguage  // Include language in the request
+            })
+        });
+        const data = await response.json();
+        removeTypingIndicator();
+        addMessage('bot', data.reply, data.quick_actions || []);
+    } catch (error) {
+        removeTypingIndicator();
+        addMessage('bot', 'Sorry, there was an error processing your request.');
+    }
+}
 
-// Initial bot greeting
-window.onload = () => {
-    appendMessage('Hello! I\'m your support assistant. How can I help you today?', 'bot');
-    setQuickActions([
-        { label: 'Track Order', value: 'Track my order' },
-        { label: 'Return Item', value: 'I want to return an item' },
-        { label: 'Talk to Human', value: 'I want to talk to a human agent' }
-    ]);
-};
+// Language selector change event
+languageSelector.addEventListener('change', (e) => {
+    updateLanguage(e.target.value);
+});
+
+// Initialize with default language
+updateLanguage(currentLanguage);
+
+chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const message = messageInput.value.trim();
+    if (!message) return;
+    sendMessage(message);
+});
+
+// Update initial quick actions in the welcome message
+document.getElementById('initial-quick-actions')?.querySelectorAll('button').forEach(btn => btn.setAttribute('type', 'button'));
 </script>
-</body>
-</html> 
+{% endblock %} 

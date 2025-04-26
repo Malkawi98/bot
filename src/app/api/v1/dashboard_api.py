@@ -518,7 +518,7 @@ async def create_knowledge_source(source: KnowledgeSourceRequest):
             if source.source_type == "url":
                 # Use the RAG service to process the URL
                 # This would extract content and add it to the vector store
-                content = rag_service.get_context_from_url(source.url)
+                content = rag_service.retrieve_context(source.url, is_url=True)
                 if content:
                     # Add the content to the vector store
                     rag_service.add_text_to_milvus(content)
@@ -552,7 +552,7 @@ async def import_from_url(request: ImportUrlRequest):
             )
         
         # Use the RAG service to extract content from the URL
-        content = rag_service.get_context_from_url(request.url)
+        content = rag_service.retrieve_context(request.url, is_url=True)
         
         if not content:
             return {

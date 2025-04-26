@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 
-# Use a single consistent template directory path for Docker compatibility
-templates = Jinja2Templates(directory="/code/app/templates")
+# Import templates from the centralized configuration
+from app.core.template_config import templates
 router = APIRouter(tags=["auth-ui"])
 
 @router.get("/login-page", response_class=HTMLResponse)

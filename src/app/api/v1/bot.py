@@ -17,8 +17,8 @@ from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["bot"])
 
-# Use a single consistent template directory path for Docker compatibility
-templates = Jinja2Templates(directory="/code/app/templates")
+# Import templates from the centralized configuration
+from app.core.template_config import templates
 
 # Initialize RAG service
 rag_service = RAGService()
@@ -147,6 +147,7 @@ def save_history(session_id: str, messages: List[BaseMessage]):
 
 class BotMessageRequest(BaseModel):
     message: str
+    language: Optional[str] = "en"  # Default to English, can be 'ar' for Arabic
     session_data: Optional[Dict[str, Any]] = None
 
 class QuickAction(BaseModel):
@@ -484,12 +485,23 @@ async def test_knowledge_bot_message(
     # 2. Get bot settings from database
     bot_settings = get_bot_settings_model(db)
     
-    # 3. Determine intent and retrieve context
+    # 3. Get language preference from request or default to English
+    language = request.language or "en"
+    print(f"--- Using language: {language} ---")
+    
+    # 4. Determine intent and retrieve context
     intent = "general"
     retrieved_context = None
     action_result = None
     rag_service = RAGService()
-    search_results = rag_service.search_similar(user_message, top_k=2)
+    
+    # First search with language filter
+    search_results = rag_service.search_similar(user_message, top_k=2, language=language)
+    
+    # If no good results, try searching across all languages
+    if not search_results or len(search_results) == 0 or search_results[0].get('score', 1.0) > 0.7:
+        print(f"No good results in {language}, searching across all languages")
+        search_results = rag_service.search_similar(user_message, top_k=3, language=None)
     
     retrieved_context = None
     intent = "knowledge_base_query"
@@ -502,6 +514,34 @@ async def test_knowledge_bot_message(
                 texts.append(result["text"])
                 print(f"--- Found text result: {result['text'][:100]}... ---")
     
+    # Prepare the prompt with context
+    if retrieved_context:
+        # Add language instruction based on detected language
+        lang_instruction = ""
+        if language == "ar":
+            lang_instruction = "Please respond in Arabic."
+        elif language == "en":
+            lang_instruction = "Please respond in English."
+            
+        prompt = f"""You are a helpful e-commerce support assistant. Use the following context to answer the user's question. If you don't know the answer based on the context, just say you don't have that information. {lang_instruction}
+
+Context: {retrieved_context}
+
+User: {user_message}
+"""
+    else:
+        # Add language instruction based on detected language
+        lang_instruction = ""
+        if language == "ar":
+            lang_instruction = "Please respond in Arabic."
+        elif language == "en":
+            lang_instruction = "Please respond in English."
+            
+        prompt = f"""You are a helpful e-commerce support assistant. Answer the user's question to the best of your ability. If you don't know the answer, just say you don't have that information. {lang_instruction}
+
+User: {user_message}
+"""
+
     # Combine texts into a single context
     if texts:
         retrieved_context = "\n\n".join(texts)
@@ -514,6 +554,7 @@ async def test_knowledge_bot_message(
         "intent": intent,
         "retrieved_context": retrieved_context,
         "action_result": None,
+        "language": language,  # Pass language to the graph
     }
 
     # 4. Invoke the graph

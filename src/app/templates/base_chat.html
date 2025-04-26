@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Chat Bot{% endblock %}</title>
+    {% block styles %}
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    {% endblock %}
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+    <div class="min-h-screen flex flex-col md:flex-row">
+        {% block sidebar %}{% endblock %}
+        <div class="flex-1 overflow-x-hidden overflow-y-auto">
+            {% block main_content %}{% endblock %}
+        </div>
+    </div>
+    {% block scripts %}{% endblock %}
+    {% block debug_panel %}{% endblock %}
+</body>
+</html> 

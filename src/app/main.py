@@ -8,6 +8,7 @@ from app.api.v1.auth_ui import router as auth_ui_router
 from app.api.v1.rag import router as rag_router
 from app.api.v1.vector_store import router as vector_store_router
 from app.api.v1.bot_settings import router as bot_settings_router
+from app.api.v1.vector_store_debug import router as vector_store_debug_router
 from app.core.config import settings
 from app.core.setup import create_application
 
@@ -27,6 +28,9 @@ app.include_router(rag_router, prefix="/api/v1")
 
 # Include the Vector Store API router
 app.include_router(vector_store_router, prefix="/api/v1")
+
+# Include the Vector Store Debug API router
+app.include_router(vector_store_debug_router, prefix="/api/v1")
 
 # Include the Bot Settings API router
 app.include_router(bot_settings_router, prefix="/api/v1")

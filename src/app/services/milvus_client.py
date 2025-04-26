@@ -10,7 +10,7 @@ MILVUS_PORT = "19530"
 
 COLLECTION_NAME = "rag_embeddings"
 EMBEDDING_DIM = 1536  # Adjust to your embedding model's output size
-EMBEDDING_MODEL = "text-embedding-ada-002"  # OpenAI embedding model
+EMBEDDING_MODEL = "text-embedding-3-large"  # Updated to better multilingual model
 
 # Initialize OpenAI client
 openai.api_key = os.getenv("OPENAI_API_KEY") or getattr(settings, "OPENAI_API_KEY", "")
@@ -39,13 +39,45 @@ def connect_to_milvus(alias: str = "default"):
 
 
 def create_collection(collection_name: str = COLLECTION_NAME, dim: int = EMBEDDING_DIM):
-    fields = [FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
+    fields = [
+        FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
         FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=dim),
-        FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=2048), ]
-    schema = CollectionSchema(fields, description="RAG text embeddings")
+        FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=2048),
+        # Add language field for multilingual support
+        FieldSchema(name="language", dtype=DataType.VARCHAR, max_length=10),
+    ]
+    schema = CollectionSchema(fields, description="Multilingual RAG text embeddings")
+    
+    # Create collection if it doesn't exist
     if collection_name not in list_collections():
         Collection(name=collection_name, schema=schema)
-    return Collection(collection_name)
+        print(f"Created new collection: {collection_name}")
+    
+    collection = Collection(collection_name)
+    
+    # Create index if it doesn't exist
+    try:
+        index_params = {
+            "index_type": "IVF_FLAT",
+            "metric_type": "L2",
+            "params": {"nlist": 128}
+        }
+        collection.create_index(field_name="embedding", index_params=index_params)
+        print(f"Created index on collection: {collection_name}")
+    except Exception as e:
+        if "index already exists" in str(e).lower():
+            print(f"Index already exists on collection: {collection_name}")
+        else:
+            print(f"Error creating index: {e}")
+    
+    # Load collection
+    try:
+        collection.load()
+        print(f"Loaded collection: {collection_name}")
+    except Exception as e:
+        print(f"Error loading collection: {e}")
+    
+    return collection
 
 
 def list_collections():
@@ -59,6 +91,39 @@ def drop_collection(collection_name: str = COLLECTION_NAME):
     from pymilvus import utility
     if collection_name in utility.list_collections():
         utility.drop_collection(collection_name)
+        
+def reset_collection(collection_name: str = COLLECTION_NAME):
+    """
+    Reset the Milvus collection by dropping it and recreating it.
+    This effectively clears all embeddings.
+    """
+    try:
+        # Drop the collection if it exists
+        drop_collection(collection_name)
+        print(f"Dropped collection: {collection_name}")
+        
+        # Create a new collection with the same schema
+        collection = create_collection(collection_name)
+        
+        # Make sure the index is created
+        try:
+            index_params = {
+                "index_type": "IVF_FLAT",
+                "metric_type": "L2",
+                "params": {"nlist": 128}
+            }
+            collection.create_index(field_name="embedding", index_params=index_params)
+            print(f"Created index on collection: {collection_name}")
+        except Exception as e:
+            print(f"Error creating index during reset: {e}")
+        
+        # Load the collection
+        collection.load()
+        print(f"Collection {collection_name} has been reset and loaded")
+        return True
+    except Exception as e:
+        print(f"Error resetting collection: {e}")
+        raise e
 
 
 def build_index(collection_name: str = COLLECTION_NAME):
@@ -92,83 +157,117 @@ def load_collection(collection_name: str = COLLECTION_NAME):
     return col
 
 
-def insert_embedding(embedding: list[float], text: str, collection_name: str = COLLECTION_NAME):
+def insert_embedding(embedding: list[float], text: str, collection_name: str = COLLECTION_NAME, language: str = "en"):
     """
     Insert a single embedding and its corresponding text into the collection.
     This function is optimized for single item insertion.
+    
+    Args:
+        embedding: The embedding vector
+        text: The text content
+        collection_name: Name of the collection
+        language: Language code (e.g., 'en', 'ar')
     """
-    if collection_name not in list_collections():
-        create_collection(collection_name)
-    col = Collection(collection_name)
-
-    # Validate input
-    if not isinstance(embedding, list):
-        raise ValueError("embedding must be a list of floats")
-    if not isinstance(text, str):
-        raise ValueError("text must be a string")
-
-    # Debug information
-    print(f"Inserting single embedding, length: {len(embedding)}")
-
-    # Insert using entity format (most reliable for Milvus)
     try:
-        entity = [{"embedding": embedding, "text": text}]
-        col.insert(entity)
-
-        # Build index if needed and load collection
-        build_index(collection_name)
-        load_collection(collection_name)
+        # Connect to Milvus
+        connect_to_milvus()
+        
+        # Ensure collection exists
+        if collection_name not in list_collections():
+            create_collection(collection_name)
+        
+        # Get collection
+        collection = Collection(collection_name)
+        
+        # Insert data with language metadata
+        data = [
+            # No need to provide IDs as they are auto-generated
+            [embedding],  # embedding field
+            [text],       # text field
+            [language]    # language field
+        ]
+        
+        collection.insert(data)
         return True
     except Exception as e:
         print(f"Error inserting embedding: {e}")
-        raise
+        return False
 
 
 def insert_embeddings(embeddings: list[list[float]], texts: list[str],
-                      collection_name: str = COLLECTION_NAME):
+                      collection_name: str = COLLECTION_NAME, languages: list[str] = None):
     """
     Insert multiple embeddings and their corresponding texts into the collection.
     This function is for batch insertion of multiple items.
+    
+    Args:
+        embeddings: List of embedding vectors
+        texts: List of text content
+        collection_name: Name of the collection
+        languages: List of language codes (e.g., ['en', 'ar']). If None, defaults to 'en' for all.
     """
-    if collection_name not in list_collections():
-        create_collection(collection_name)
-    col = Collection(collection_name)
-
-    # Debug information
-    print(f"Embeddings: {len(embeddings)}, Texts: {len(texts)}")
-    if len(embeddings) > 0:
-        print(f"Sample embedding[0]: {embeddings[0][:10]}...")
-
-    # Validate input
-    if not isinstance(embeddings, list):
-        raise ValueError("embeddings must be a list of list of floats")
-    if not isinstance(texts, list):
-        raise ValueError("texts must be a list of strings")
-    if len(embeddings) != len(texts):
-        raise ValueError("embeddings and texts must have the same length")
-
-    # Validate each embedding and text
-    for i, (emb, txt) in enumerate(zip(embeddings, texts)):
-        if not isinstance(emb, list):
-            raise ValueError(f"embedding at index {i} must be a list of floats")
-        if not isinstance(txt, str):
-            raise ValueError(f"text at index {i} must be a string")
-
-    # Insert the data using row-based format (most reliable for Milvus)
+    if not embeddings or not texts or len(embeddings) != len(texts):
+        print("Error: embeddings and texts must be non-empty lists of the same length")
+        return False
+    
+    # Default to English if languages not provided
+    if not languages:
+        languages = ['en'] * len(texts)
+    elif len(languages) != len(texts):
+        print("Error: languages list must be the same length as texts")
+        languages = ['en'] * len(texts)
+    
     try:
-        # Create entities as a list of dictionaries (row-based format)
-        entities = [{"embedding": emb, "text": txt} for emb, txt in zip(embeddings, texts)]
-
-        # Insert data
-        col.insert(entities)
-
-        # Build index if needed and load collection
-        build_index(collection_name)
-        load_collection(collection_name)
+        # Connect to Milvus
+        connect_to_milvus()
+        
+        # Ensure collection exists
+        if collection_name not in list_collections():
+            create_collection(collection_name)
+        
+        # Get collection
+        collection = Collection(collection_name)
+        
+        # Insert data with language metadata
+        data = [
+            # No need to provide IDs as they are auto-generated
+            embeddings,  # embedding field
+            texts,       # text field
+            languages    # language field
+        ]
+        
+        collection.insert(data)
         return True
     except Exception as e:
         print(f"Error inserting embeddings: {e}")
-        raise
+        return False
+
+
+def insert_embeddings_with_metadata(embeddings: list[list[float]], texts: list[str],
+                                  metadata: list[dict] = None,
+                                  collection_name: str = COLLECTION_NAME):
+    """
+    Insert multiple embeddings with their texts and metadata into the collection.
+    
+    Args:
+        embeddings: List of embedding vectors
+        texts: List of text content
+        metadata: List of metadata dictionaries, each containing at least a 'language' key
+        collection_name: Name of the collection
+    """
+    if not embeddings or not texts or len(embeddings) != len(texts):
+        print("Error: embeddings and texts must be non-empty lists of the same length")
+        return False
+    
+    # Extract languages from metadata or default to English
+    languages = []
+    if metadata and len(metadata) == len(texts):
+        for meta in metadata:
+            languages.append(meta.get('language', 'en'))
+    else:
+        languages = ['en'] * len(texts)
+    
+    return insert_embeddings(embeddings, texts, collection_name, languages)
 
 
 def get_embedding(text: str) -> list[float]:
@@ -194,7 +293,8 @@ def get_embedding(text: str) -> list[float]:
 
 
 def search_embedding(embedding: list[float], top_k: int = 5,
-                     collection_name: str = COLLECTION_NAME):
+                     collection_name: str = COLLECTION_NAME,
+                     filter_expr: str = None):
     # Ensure collection exists
     if collection_name not in list_collections():
         print(f"Collection {collection_name} does not exist. Creating it.")
@@ -216,7 +316,7 @@ def search_embedding(embedding: list[float], top_k: int = 5,
             anns_field="embedding",
             param={"metric_type": "L2", "params": {"nprobe": 10}}, 
             limit=top_k,
-            output_fields=["text"], 
+            output_fields=["text", "language"], 
         )
         print(f"Search results: {results}")
         
@@ -243,9 +343,11 @@ def search_embedding(embedding: list[float], top_k: int = 5,
                     try:
                         if hasattr(hit, 'entity') and isinstance(hit.entity, dict):
                             text = hit.entity.get('text', '')
+                            language = hit.entity.get('language', 'en')
                             if text:
                                 simplified_results.append({
                                     'text': text,
+                                    'language': language,
                                     'score': hit.distance if hasattr(hit, 'distance') else 0.0
                                 })
                                 print(f"Added text with score {hit.distance if hasattr(hit, 'distance') else 0.0}: {text[:50]}...")
@@ -288,23 +390,77 @@ def get_all_entries(collection_name: str = COLLECTION_NAME, limit: int = 1000):
     Returns:
         List of dictionaries containing the entries
     """
-    # Ensure collection exists
-    if collection_name not in list_collections():
-        create_collection(collection_name)
-        # If collection is empty, return empty results
-        return []
+    # Print all available collections for debugging
+    all_collections = list_collections()
+    print(f"Available collections: {all_collections}")
     
-    # Load collection into memory
-    col = load_collection(collection_name)
+    # Check if the collection exists in Milvus
+    if collection_name not in all_collections:
+        print(f"Warning: Collection '{collection_name}' not found in Milvus. Available collections: {all_collections}")
+        # Try to find any collection that might contain embeddings
+        if all_collections:
+            alt_collection = all_collections[0]
+            print(f"Trying alternative collection: {alt_collection}")
+            return get_all_entries(alt_collection, limit)
+        else:
+            print("No collections found in Milvus")
+            create_collection(collection_name)
+            return []
     
     try:
-        # Query all entries
-        results = col.query(
-            expr="id > 0",  # Query all entries
-            output_fields=["id", "text"],
-            limit=limit
-        )
-        return results
+        # Get collection and ensure it has an index
+        col = Collection(collection_name)
+        print(f"Opened collection: {collection_name}")
+        
+        # Print collection info
+        try:
+            schema = col.schema
+            print(f"Collection schema: {schema}")
+            num_entities = col.num_entities
+            print(f"Collection has {num_entities} entities")
+        except Exception as e:
+            print(f"Error getting collection info: {e}")
+        
+        # Check if collection has an index
+        try:
+            index_info = col.index().info
+            print(f"Index info: {index_info}")
+            if not index_info:
+                # Create index if it doesn't exist
+                try:
+                    index_params = {
+                        "index_type": "IVF_FLAT",
+                        "metric_type": "L2",
+                        "params": {"nlist": 128}
+                    }
+                    col.create_index(field_name="embedding", index_params=index_params)
+                    print(f"Created index on collection: {collection_name}")
+                except Exception as e:
+                    print(f"Error creating index: {e}")
+        except Exception as e:
+            print(f"Error checking index: {e}")
+        
+        # Load collection into memory
+        col.load()
+        
+        # Query all entries - use the most reliable method based on our debug findings
+        try:
+            # Use the standard query approach which we know works from our debug endpoint
+            results = col.query(
+                expr="id > 0",  # Query all entries
+                output_fields=["id", "text", "language"],
+                limit=limit
+            )
+            
+            if results and len(results) > 0:
+                print(f"Retrieved {len(results)} entries using query")
+                return results
+            
+            print("No results found with standard query")
+            return []
+        except Exception as e:
+            print(f"Error querying entries: {e}")
+            return []
     except Exception as e:
         print(f"Error getting all entries: {e}")
         # Return empty results on error
