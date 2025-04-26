@@ -120,7 +120,7 @@ async def customer_support_bot(request: Request):
     """
     Customer-facing support bot interface
     """
-    return templates.TemplateResponse(request, "customer_support_bot.html")
+    return templates.TemplateResponse(request, "langgraph_chat_test.html")
 
 
 
@@ -188,12 +188,12 @@ async def knowledge_base(request: Request):
         "entries": formatted_entries
     })
 
-@router.get("/chat-test")
-async def chat_test(request: Request):
-    """
-    Redirect to LangGraph chat testing interface
-    """
-    return RedirectResponse(url="/langgraph-chat-test", status_code=status.HTTP_301_MOVED_PERMANENTLY)
+# @router.get("/chat-test")
+# async def chat_test(request: Request):
+#     """
+#     Redirect to LangGraph chat testing interface
+#     """
+#     return RedirectResponse(url="/langgraph-chat-test", status_code=status.HTTP_301_MOVED_PERMANENTLY)
 
 @router.get("/langgraph-chat-test", response_class=HTMLResponse)
 async def langgraph_chat_test(request: Request):
