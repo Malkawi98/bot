@@ -15,10 +15,10 @@ from app.core.db.database import Base
 # access to the values within the .ini file in use.
 config = context.config
 
-# Use SQLite for local development
+# Use PostgreSQL for all environments
 config.set_main_option(
     "sqlalchemy.url",
-    "sqlite:///./app.db"
+    settings.sqlalchemy_sync_url
 )
 
 # Interpret the config file for Python logging.

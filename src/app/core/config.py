@@ -33,12 +33,6 @@ class DatabaseSettings(BaseSettings):
     pass
 
 
-class SQLiteSettings(DatabaseSettings):
-    SQLITE_URI: str = config("SQLITE_URI", default="./sql_app.db")
-    SQLITE_SYNC_PREFIX: str = config("SQLITE_SYNC_PREFIX", default="sqlite:///")
-    SQLITE_ASYNC_PREFIX: str = config("SQLITE_ASYNC_PREFIX", default="sqlite+aiosqlite:///")
-
-
 class MySQLSettings(DatabaseSettings):
     MYSQL_USER: str = config("MYSQL_USER", default="username")
     MYSQL_PASSWORD: str = config("MYSQL_PASSWORD", default="password")
