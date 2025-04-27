@@ -9,11 +9,16 @@ services:
     restart: always
     command: sh -c "alembic -c /code/alembic.ini upgrade heads && gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000"
     env_file:
-      - ./src/.env
+      - ./.env
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       MILVUS_URI: http://milvus:19530
+      POSTGRES_SERVER: db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: db
+      POSTGRES_PORT: 5432
     ports:
       - "8003:8000"
     depends_on:

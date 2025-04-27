@@ -16,9 +16,37 @@ from app.core.db.database import Base
 config = context.config
 
 # Use PostgreSQL for all environments
+# Check if we're running in a Docker container or locally
+import os
+
+try:
+    # Try to use the settings from config
+    db_url = settings.sqlalchemy_sync_url
+    print(f"Using database URL from settings: {db_url}")
+    
+    # Check if we're running in Docker (this env var would be set in docker-compose)
+    # Or use an environment variable to explicitly set the host
+    explicit_host = os.environ.get('POSTGRES_SERVER')
+    
+    if explicit_host:
+        # Use the explicitly provided host
+        db_url = db_url.replace('localhost', explicit_host)
+        db_url = db_url.replace('127.0.0.1', explicit_host)
+        print(f"Using explicitly set database host: {explicit_host}")
+        print(f"Updated database URL: {db_url}")
+        
+except Exception as e:
+    # Fallback to hardcoded URL if settings fail
+    print(f"Error getting database URL from settings: {e}")
+    
+    # Use localhost for local testing, db for Docker
+    db_host = os.environ.get('POSTGRES_SERVER', 'localhost')
+    db_url = f"postgresql://user:pass@{db_host}:5432/db"
+    print(f"Using fallback database URL: {db_url}")
+
 config.set_main_option(
     "sqlalchemy.url",
-    settings.sqlalchemy_sync_url
+    db_url
 )
 
 # Interpret the config file for Python logging.
