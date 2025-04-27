@@ -14,6 +14,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       MILVUS_URI: http://milvus:19530
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
       POSTGRES_SERVER: db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: pass
