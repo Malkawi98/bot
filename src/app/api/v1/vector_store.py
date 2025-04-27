@@ -135,12 +135,17 @@ async def get_all_vector_store_entries():
         
         # Format the entries for the response
         formatted_entries = []
-        for entry in entries:
+        for i, entry in enumerate(entries, 1):
+            # Extract a clean entry number for display
+            original_id = entry.get("id", "")
+            display_id = i  # Use the enumeration index as a clean display ID
+            
             formatted_entries.append({
-                "id": entry.get("id", ""),
+                "id": original_id,  # Keep the original ID for database operations
+                "display_id": display_id,  # Add a clean display ID for UI
                 "text": entry.get("text", ""),
                 "language": entry.get("language", "en"),
-                "title": f"Entry #{entry.get('id', '')}" if entry.get("id") else "Knowledge Entry",
+                "title": f"Entry #{display_id}",
                 "content": entry.get("text", ""),
                 "tags": ["vector-store", entry.get("language", "en")]
             })

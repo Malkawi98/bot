@@ -172,13 +172,18 @@ def get_order_status(order_id_or_query: str) -> Dict[str, Any]:
     Input can be an order ID or a query like 'where is my order?'.
     """
     print(f"--- Tool: Checking order status for: {order_id_or_query} ---")
-    order_number_match = re.search(r"\d{5,}", order_id_or_query) # Simple regex for demo
-    order_number = order_number_match.group(0) if order_number_match else None
+    # Accept only order IDs 1-5
+    order_id_match = re.search(r"order\s*(\d+)" , order_id_or_query, re.IGNORECASE)
+    order_id = int(order_id_match.group(1)) if order_id_match else None
 
-    if not order_number:
-        # If no order number found, generate a mock one for demo
-        order_number = _generate_random_order_number()
-        print(f"--- Tool: No order ID found, using mock ID: {order_number} ---")
+    if order_id is not None:
+        if 1 <= order_id <= 5:
+            # For demo, generate a 5-digit order number based on the ID
+            order_number = f"1000{order_id}"
+        else:
+            return {"error": "Order ID not found. Please provide a valid order ID (1-5)."}
+    else:
+        return {"error": "Please provide a valid order ID (1-5) to check your order status."}
 
     try:
         # Get order info

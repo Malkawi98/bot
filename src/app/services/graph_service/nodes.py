@@ -83,6 +83,13 @@ def classify_intent_node(state: ConversationState):
         print("--- Detected product-related query ---")
         return {"intent": "product_availability"}
     
+    # Check if the message is just a number (likely an order number)
+    if re.match(r'^\d+$', user_message.strip()):
+        print(f"--- Detected numeric input '{user_message}', treating as order number ---")
+        # For simple numeric inputs, directly set the order number in the state
+        order_number = user_message.strip()
+        return {"intent": "order_status", "extracted_order_number": order_number}
+        
     # Simple prompt for classification
     prompt = f"""Based on the following user message and conversation history, classify the primary intent. Choose ONE from: 'order_status', 'knowledge_base_query', 'product_availability', 'greeting', 'other'.
 
@@ -112,6 +119,121 @@ def classify_intent_node(state: ConversationState):
     
     return {"intent": intent, "frustration_count": frustration_count}
 
+def order_status_node(state: ConversationState):
+    """Handles order status queries and provides status information for orders 1-5."""
+    print("--- Node: Order Status ---")
+    user_message = state['user_message']
+    messages = state['messages']
+    language = state.get('language', 'en')  # Get language from state
+    
+    # Check if order number was already extracted in the classify_intent_node
+    extracted_order_number = state.get('extracted_order_number')
+    if extracted_order_number:
+        print(f"--- Using pre-extracted order number: {extracted_order_number} ---")
+        return process_order_status(extracted_order_number, language)
+    
+    # Use LLM to extract order number from user message
+    # This is more flexible than regex and can handle a wider variety of user inputs
+    conversation_context = "\n".join([f"{m.type}: {m.content}" for m in messages[-3:] if hasattr(m, 'type') and hasattr(m, 'content')])
+    
+    # Check for simple numeric input first (most common case after being asked for order number)
+    if re.match(r'^\d+$', user_message.strip()):
+        order_number = user_message.strip()
+        print(f"--- Detected simple numeric input: {order_number} ---")
+        return process_order_status(order_number, language)
+    
+    # Construct prompt based on language
+    if language == 'ar':
+        extract_prompt = f"""استخرج رقم الطلب من رسالة المستخدم التالية. إذا كان هناك رقم طلب، أعد الرقم فقط. إذا لم يكن هناك رقم طلب، أعد 'none'.
+
+سياق المحادثة السابقة:
+{conversation_context}
+
+رسالة المستخدم: {user_message}
+
+رقم الطلب:"""
+    else:
+        extract_prompt = f"""Extract the order number from the following user message. If there is an order number, return only the number. If there is no order number, return 'none'.
+
+Previous conversation context:
+{conversation_context}
+
+User message: {user_message}
+
+Order number:"""
+    
+    # Call LLM to extract order number
+    response = llm.invoke(extract_prompt)
+    extracted_text = response.content.strip().lower()
+    
+    # Process the extracted text
+    print(f"--- LLM extracted: '{extracted_text}' from message: '{user_message}' ---")
+    
+    # Check if the extracted text is a valid order number
+    if extracted_text == 'none' or not re.search(r'\d+', extracted_text):
+        order_number = None
+    else:
+        # Extract just the numeric part if there's any additional text
+        match = re.search(r'(\d+)', extracted_text)
+        if match:
+            order_number = match.group(1)
+        else:
+            order_number = None
+    
+    # Process the order status with the extracted order number
+    if order_number:
+        return process_order_status(order_number, language)
+    else:
+        # If no order number found, ask the user to provide one
+        if language == 'ar':
+            response = "يرجى تقديم رقم الطلب الخاص بك حتى أتمكن من التحقق من حالته."
+        else:
+            response = "Please provide your order number so I can check its status."
+        return {"action_result": {"order_status": {"found": False, "message": response}}}
+    
+def process_order_status(order_number, language):
+    """Process order status for a given order number and language."""
+    # Define order statuses for orders 1-5
+    order_statuses = {
+        "1": {"status": "delivered", "description": "Your order has been delivered successfully.", 
+              "ar_description": "تم توصيل طلبك بنجاح."},
+        "2": {"status": "shipped", "description": "Your order has been shipped and is on its way to you.", 
+              "ar_description": "تم شحن طلبك وهو في الطريق إليك."},
+        "3": {"status": "processing", "description": "Your order is currently being processed in our warehouse.", 
+              "ar_description": "يتم تجهيز طلبك حاليًا في مستودعنا."},
+        "4": {"status": "payment_confirmed", "description": "Payment for your order has been confirmed and we're preparing your items.", 
+              "ar_description": "تم تأكيد الدفع لطلبك ونحن نقوم بتجهيز العناصر الخاصة بك."},
+        "5": {"status": "pending", "description": "Your order is pending confirmation. We'll update you soon.", 
+              "ar_description": "طلبك في انتظار التأكيد. سنقوم بتحديث حالته قريبًا."}
+    }
+    
+    # Check if order number is between 1-5
+    if order_number in order_statuses:
+        status_info = order_statuses[order_number]
+        if language == 'ar':
+            response = f"طلبك رقم {order_number} {status_info['ar_description']}"
+        else:
+            response = f"Order #{order_number} is currently {status_info['status']}. {status_info['description']}"
+        
+        # Create order info object for display
+        order_info = {
+            "order_id": order_number,
+            "status": status_info['status'],
+            "status_description": status_info['description'] if language == 'en' else status_info['ar_description'],
+            "estimated_delivery": "2025-05-01" if status_info['status'] in ['processing', 'payment_confirmed', 'shipped'] else None,
+            "tracking_number": f"TRK{order_number}12345" if status_info['status'] == 'shipped' else None
+        }
+        
+        return {"action_result": {"order_status": {"found": True, "message": response, "order_info": order_info}}}
+    else:
+        # Order number not in range 1-5
+        if language == 'ar':
+            response = f"عذرًا، لا يمكنني العثور على معلومات حول الطلب رقم {order_number}. يرجى التأكد من رقم الطلب والمحاولة مرة أخرى."
+        else:
+            response = f"Sorry, I couldn't find information for order #{order_number}. Please verify your order number and try again."
+        
+        return {"action_result": {"order_status": {"found": False, "message": response}}}
+
 def action_node(state: ConversationState):
     """Invokes the appropriate tool based on the classified intent."""
     print("--- Node: Action ---")
@@ -120,6 +242,10 @@ def action_node(state: ConversationState):
     messages = state['messages']
     db = state.get('db')
     language = state.get('language', 'en')  # Get language from state
+    
+    # Handle order status queries
+    if intent == 'order_status':
+        return order_status_node(state)
     
     # Handle coupon queries
     if intent == 'coupon_query':
@@ -135,10 +261,7 @@ def action_node(state: ConversationState):
     tool_map = {tool.name: tool for tool in tools}
     tool_to_call = None
     
-    if intent == 'order_status':
-        tool_to_call = tool_map.get('order_status_checker')
-        input_value = user_message  # String input for order status
-    elif intent == 'knowledge_base_query':
+    if intent == 'knowledge_base_query':
         # For other knowledge base queries, try the regular tool
         tool_to_call = tool_map.get('knowledge_base_retriever')
         input_value = user_message  # Use string input instead of state
@@ -306,6 +429,20 @@ def generate_response_node(state: ConversationState):
     # We won't use session_id in this function anymore
     # The history will be saved in the API endpoint
 
+    # Special handling for order status results
+    if intent == 'order_status' and action_result and 'order_status' in action_result:
+        order_result = action_result['order_status']
+        response_text = order_result['message']
+        
+        # Add to history
+        updated_messages = messages + [HumanMessage(content=user_message_content), AIMessage(content=response_text)]
+        
+        # If order was found, include order_info in the return value
+        if order_result.get('found', False) and 'order_info' in order_result:
+            return {"response": response_text, "order_info": order_result['order_info'], "messages": updated_messages}
+        else:
+            return {"response": response_text, "messages": updated_messages}
+    
     # Special handling for product availability results
     if intent == 'product_availability' and action_result and 'product_availability' in action_result:
         product_result = action_result['product_availability']

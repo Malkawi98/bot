@@ -9,7 +9,7 @@ MILVUS_HOST = "localhost"  # Use localhost for local development
 MILVUS_PORT = "19530"
 
 COLLECTION_NAME = "rag_embeddings"
-EMBEDDING_DIM = 1536  # Adjust to your embedding model's output size
+EMBEDDING_DIM = 3072  # text-embedding-3-large has 3072 dimensions
 EMBEDDING_MODEL = "text-embedding-3-large"  # Updated to better multilingual model
 
 # Initialize OpenAI client
@@ -180,14 +180,21 @@ def insert_embedding(embedding: list[float], text: str, collection_name: str = C
         collection = Collection(collection_name)
         
         # Insert data with language metadata
-        data = [
-            # No need to provide IDs as they are auto-generated
-            [embedding],  # embedding field
-            [text],       # text field
-            [language]    # language field
+        # Format data correctly for Milvus insertion
+        # The expected format is a list of entities, where each entity is a dict of field values
+        entities = [
+            {
+                "embedding": embedding,  # embedding field - single vector
+                "text": text,           # text field - single string
+                "language": language     # language field - single string
+            }
         ]
         
-        collection.insert(data)
+        # Debug output
+        print(f"Inserting entity with embedding length: {len(embedding)}, text length: {len(text)}, language: {language}")
+        
+        # Insert the entities
+        collection.insert(entities)
         return True
     except Exception as e:
         print(f"Error inserting embedding: {e}")
@@ -229,14 +236,22 @@ def insert_embeddings(embeddings: list[list[float]], texts: list[str],
         collection = Collection(collection_name)
         
         # Insert data with language metadata
-        data = [
-            # No need to provide IDs as they are auto-generated
-            embeddings,  # embedding field
-            texts,       # text field
-            languages    # language field
-        ]
+        # Format data correctly for Milvus batch insertion
+        # The expected format is a list of entities, where each entity is a dict of field values
+        entities = []
         
-        collection.insert(data)
+        for i in range(len(embeddings)):
+            entities.append({
+                "embedding": embeddings[i],  # embedding field - vector
+                "text": texts[i],           # text field - string
+                "language": languages[i]     # language field - string
+            })
+        
+        # Debug output
+        print(f"Batch inserting {len(entities)} entities with embeddings")
+        
+        # Insert the entities
+        collection.insert(entities)
         return True
     except Exception as e:
         print(f"Error inserting embeddings: {e}")
@@ -445,15 +460,32 @@ def get_all_entries(collection_name: str = COLLECTION_NAME, limit: int = 1000):
         
         # Query all entries - use the most reliable method based on our debug findings
         try:
+            # Get the schema fields to determine what fields are available
+            schema_fields = [field.name for field in col.schema.fields]
+            print(f"Available schema fields: {schema_fields}")
+            
+            # Determine which output fields to use based on what's available in the schema
+            output_fields = ["id", "text"]
+            if "language" in schema_fields:
+                output_fields.append("language")
+            
+            print(f"Using output fields: {output_fields}")
+            
             # Use the standard query approach which we know works from our debug endpoint
             results = col.query(
                 expr="id > 0",  # Query all entries
-                output_fields=["id", "text", "language"],
+                output_fields=output_fields,
                 limit=limit
             )
             
             if results and len(results) > 0:
                 print(f"Retrieved {len(results)} entries using query")
+                
+                # Add default language if it's missing
+                if "language" not in schema_fields:
+                    for result in results:
+                        result["language"] = "en"  # Add default language
+                
                 return results
             
             print("No results found with standard query")

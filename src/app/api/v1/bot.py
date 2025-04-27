@@ -796,20 +796,22 @@ async def langgraph_bot_message(
     else:
         # Fallback if no messages are found
         ai_reply = final_state.get("response", "Sorry, I couldn't generate a response.")
-    
-    # Get updated messages from the final state
-    final_messages = final_state.get("messages", [])
-    if not final_messages:
-        # If no messages in final state, create minimal history with just this exchange
-        final_messages = [HumanMessage(content=user_message), AIMessage(content=ai_reply)]
 
-    # 5. Save updated history
-    save_history(session_id, final_messages)
-    print(f"--- Saved History ({len(final_messages)} messages) ---")
+    # Process the result
+    response_text = final_state.get("response", "I'm not sure how to respond to that.")
+    products = final_state.get("products", None)
+    order_info = final_state.get("order_info", None)  # Get order info if available
+    coupon = None  # Default value
+
+    # Update history with the new messages
+    updated_messages = final_state.get("messages", history + [HumanMessage(content=user_message), AIMessage(content=response_text)])
+    save_history(session_id, updated_messages)
+    print(f"--- Saved History ({len(updated_messages)} messages) ---")
 
     # 6. Set session cookie
     response.set_cookie(key="session_id", value=session_id, httponly=True, samesite="Lax", max_age=3600*24*7) # 1 week
 
+    # ... (rest of the code remains the same)
     # 7. Prepare quick actions based on intent, but only for the first message in a conversation
     intent = final_state.get("intent")
     quick_actions = None
@@ -840,11 +842,20 @@ async def langgraph_bot_message(
         quick_actions = None
 
     # 8. Extract any product, order, or coupon information from action_result
-    products = None
-    order_info = None
+    action_result = final_state.get("action_result")
+    
+    # Keep the products from earlier processing if present
+    if not products:
+        products = None
+        
+    # Handle order status information
+    if not order_info and action_result and "order_status" in action_result:
+        order_status_result = action_result["order_status"]
+        if order_status_result.get("found", False) and "order_info" in order_status_result:
+            order_info = order_status_result["order_info"]
+    
     coupons = None
     coupon = None
-    action_result = final_state.get("action_result")
     
     # Import random here to ensure it's available in this scope
     import random
@@ -1157,3 +1168,30 @@ User: {user_message}
         confidence_score=0.95,  # Mock confidence score
         source="langgraph-test"
     )
+
+class MessageModel(BaseModel):
+    type: str
+    content: str
+    extras: dict = {}
+
+@router.get("/chat/history", response_model=List[MessageModel])
+async def get_chat_history(session_id: str = Depends(get_session_id)):
+    history = load_history(session_id)
+    messages = []
+    for m in history:
+        if isinstance(m, HumanMessage):
+            messages.append({"type": "user", "content": m.content, "extras": {}})
+        elif isinstance(m, AIMessage):
+            messages.append({"type": "bot", "content": m.content, "extras": {}})
+    if not messages:
+        messages.append({
+            "type": "bot",
+            "content": "Hello! I'm your E-Commerce support assistant powered by LangGraph. How can I help you today?",
+            "extras": {}
+        })
+    return messages
+
+@router.post("/chat/clear")
+async def clear_chat_history(session_id: str = Depends(get_session_id)):
+    save_history(session_id, [])
+    return {"success": True}

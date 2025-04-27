@@ -39,8 +39,8 @@ class ProductInDB(ProductBase):
     """Schema for a product as stored in the database."""
     id: int
     is_active: bool
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True
