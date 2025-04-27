@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: migration-fix
+    command: sh -c "alembic -c /code/alembic.ini merge heads -m 'merge multiple heads'"
+    env_file:
+      - ./src/.env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MILVUS_URI: http://milvus:19530
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      milvus:
+        condition: service_healthy

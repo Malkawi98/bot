@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: web-app
     restart: always
-    command: sh -c "alembic -c /code/alembic.ini upgrade head && gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000"
+    command: sh -c "alembic -c /code/alembic.ini upgrade heads && gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000"
     env_file:
       - ./src/.env
     environment:
