@@ -36,8 +36,15 @@ def upgrade():
             sa.PrimaryKeyConstraint('id')
         )
         
-        # Create index on id
-        op.create_index('ix_bot_settings_id', 'bot_settings', ['id'], unique=False)
+        # Check if index exists before creating it
+        indexes = inspector.get_indexes('bot_settings')
+        existing_index_names = [idx['name'] for idx in indexes]
+        
+        # Create index on id if it doesn't exist
+        if 'ix_bot_settings_id' not in existing_index_names:
+            op.create_index('ix_bot_settings_id', 'bot_settings', ['id'], unique=False)
+        else:
+            print("Index ix_bot_settings_id already exists, skipping creation")
         
         # Insert default bot settings
         op.execute(

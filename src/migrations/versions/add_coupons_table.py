@@ -35,9 +35,21 @@ def upgrade():
             sa.PrimaryKeyConstraint('id')
         )
         
-        # Create index on id and code
-        op.create_index('ix_coupons_id', 'coupons', ['id'], unique=False)
-        op.create_index('ix_coupons_code', 'coupons', ['code'], unique=True)
+        # Check if indexes exist before creating them
+        indexes = inspector.get_indexes('coupons')
+        existing_index_names = [idx['name'] for idx in indexes]
+        
+        # Create index on id if it doesn't exist
+        if 'ix_coupons_id' not in existing_index_names:
+            op.create_index('ix_coupons_id', 'coupons', ['id'], unique=False)
+        else:
+            print("Index ix_coupons_id already exists, skipping creation")
+            
+        # Create index on code if it doesn't exist
+        if 'ix_coupons_code' not in existing_index_names:
+            op.create_index('ix_coupons_code', 'coupons', ['code'], unique=True)
+        else:
+            print("Index ix_coupons_code already exists, skipping creation")
         
         # Insert sample coupons
         op.execute(

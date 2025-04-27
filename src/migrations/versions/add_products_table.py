@@ -41,10 +41,25 @@ def upgrade():
             sa.PrimaryKeyConstraint('id')
         )
         
-        # Create indexes
-        op.create_index('ix_products_id', 'products', ['id'], unique=False)
-        op.create_index('ix_products_name', 'products', ['name'], unique=False)
-        op.create_index('ix_products_category', 'products', ['category'], unique=False)
+        # Check if indexes exist before creating them
+        indexes = inspector.get_indexes('products')
+        existing_index_names = [idx['name'] for idx in indexes]
+        
+        # Create indexes if they don't exist
+        if 'ix_products_id' not in existing_index_names:
+            op.create_index('ix_products_id', 'products', ['id'], unique=False)
+        else:
+            print("Index ix_products_id already exists, skipping creation")
+            
+        if 'ix_products_name' not in existing_index_names:
+            op.create_index('ix_products_name', 'products', ['name'], unique=False)
+        else:
+            print("Index ix_products_name already exists, skipping creation")
+            
+        if 'ix_products_category' not in existing_index_names:
+            op.create_index('ix_products_category', 'products', ['category'], unique=False)
+        else:
+            print("Index ix_products_category already exists, skipping creation")
     else:
         print("products table already exists, skipping creation")
 
