@@ -16,108 +16,232 @@ functions = [format_tool_to_openai_function(t) for t in tools]
 llm_with_tools = llm.bind_functions(functions)
 classifier_llm_with_tools = classifier_llm.bind_functions(functions)
 
+# Define the edges for the graph flow
+from .edges import route_based_on_intent
+
+
+# This function is no longer needed as we use LLM-based frustration detection
+# Keeping it for backward compatibility
 def detect_frustration(user_message: str) -> bool:
-    frustration_keywords = [
-        "angry", "frustrated", "useless", "not working", "annoyed", "mad", "upset", "hate", "stupid", "idiot", "terrible", "worst", "bad service"
-    ]
-    return any(word in user_message.lower() for word in frustration_keywords)
+    # This is now handled by the LLM in classify_intent_node
+    return False
+
 
 def frustration_node(state: ConversationState):
+    """Handles user frustration using LLM to generate an empathetic response and offer appropriate help."""
     print("--- Node: Frustration ---")
-    state['bot_message'] = "It seems you're having trouble. Would you like to be routed to a real person named Ahmad?"
+    user_message = state['user_message']
+    messages = state['messages']
+    frustration_count = state.get('frustration_count', 0)
+    language = state.get('language', 'en')
+    
+    # Create a history string for context
+    history_str = "\n".join([f"{m.type}: {m.content}" for m in messages[-5:]])  # Last 5 messages for context
+    
+    # Create a prompt for the LLM to generate an empathetic response
+    prompt = f"""You are a helpful customer service AI for an e-commerce store.
+    The user is showing signs of frustration. Based on the conversation history and their message,
+    generate an empathetic response that acknowledges their frustration and offers appropriate help.
+    
+    Conversation History:
+    {history_str}
+    
+    User's Message: "{user_message}"
+    
+    Frustration Level: {'High' if frustration_count > 1 else 'Moderate'}
+    
+    Guidelines:
+    1. Be empathetic and acknowledge their feelings
+    2. Offer specific help based on what they're trying to accomplish
+    3. If frustration level is High, offer to connect them with a human agent
+    4. Keep your response concise and helpful
+    5. Don't apologize excessively
+    
+    Your response:
+    """
+    
+    # Use the LLM to generate a response
+    response = llm.invoke(prompt)
+    
+    # Set the bot message to the LLM's response
+    state['bot_message'] = response.content.strip()
+    
+    # If frustration count is high, mark for potential human handoff
+    if frustration_count > 2:
+        state['potential_human_handoff'] = True
+        
     return state
 
+
 def manager_approval_node(state: ConversationState):
+    """Handles requests that require manager approval, such as refunds, using LLM to generate a contextual response."""
     print("--- Node: Manager Approval ---")
-    state['bot_message'] = (
-        "This request requires manager approval. Please wait while I notify a manager. "
-        "You will be notified once Ahmad (the manager) has approved your request."
-    )
+    user_message = state['user_message']
+    messages = state['messages']
+    language = state.get('language', 'en')
+    intent = state.get('intent', 'refund_request')
+    
+    # Create a history string for context
+    history_str = "\n".join([f"{m.type}: {m.content}" for m in messages[-5:]])  # Last 5 messages for context
+    
+    # Use LLM to analyze the refund request and generate an appropriate response
+    prompt = f"""You are a helpful customer service AI for an e-commerce store.
+    The user has made a request that requires manager approval (likely a refund or special discount).
+    
+    Conversation History:
+    {history_str}
+    
+    User's Message: "{user_message}"
+    
+    Request Type: {intent}
+    
+    Task:
+    Generate a response that:
+    1. Acknowledges their request specifically
+    2. Explains that this type of request requires manager approval
+    3. Informs them that Ahmad (the manager) will be notified
+    4. Sets clear expectations about next steps and timing
+    5. Is professional but empathetic
+    
+    Your response:
+    """
+    
+    # Use the LLM to generate a response
+    response = llm.invoke(prompt)
+    
+    # Set the bot message to the LLM's response
+    state['bot_message'] = response.content.strip()
     state['manager_approval_required'] = True
+    
+    # Extract and store details about the refund request for the manager
+    try:
+        # Use LLM to extract key details about the refund request
+        details_prompt = f"""Extract key details about this refund or special request:
+        
+        User's Message: "{user_message}"
+        
+        Extract and format as JSON with these fields:
+        - request_type: The specific type of request (e.g., "refund", "discount", "exception")
+        - reason: The reason given for the request
+        - order_id: Any order ID mentioned (or null if none)
+        - product: Any product mentioned (or null if none)
+        - urgency: Estimated urgency level ("low", "medium", "high")
+        
+        JSON response:
+        """
+        
+        details_response = classifier_llm.invoke(details_prompt)
+        
+        try:
+            request_details = json.loads(details_response.content.strip())
+            state['request_details'] = request_details
+        except json.JSONDecodeError:
+            # Fallback if response isn't valid JSON
+            state['request_details'] = {
+                "request_type": intent,
+                "raw_message": user_message
+            }
+    except Exception as e:
+        print(f"Error extracting request details: {e}")
+        # Simple fallback
+        state['request_details'] = {
+            "request_type": intent,
+            "raw_message": user_message
+        }
+    
     return state
+
 
 # Define frustration detection functions
 # We'll use these in the classify_intent_node function
 
 def classify_intent_node(state: ConversationState):
-    """Classifies the user's intent based on the latest message."""
+    """Classifies the user's intent based on the latest message and detects frustration."""
     print("--- Node: Classify Intent ---")
     user_message = state['user_message']
     messages = state['messages']
+    language = state.get('language', 'en')  # Get language from state
     
-    # Detect refund request
-    if 'refund' in user_message.lower():
-        print("--- Detected refund request, routing to manager approval ---")
-        return {"intent": "manager_approval"}
+    # Create a history string for the LLM prompt
+    history_str = "\n".join([f"{m.type}: {m.content}" for m in messages])
     
-    # Detect frustration
-    is_frustrated = detect_frustration(user_message)
-    frustration_count = state.get('frustration_count', 0)
-    if is_frustrated:
-        frustration_count += 1
-        print(f"--- Frustration detected! Count: {frustration_count} ---")
-    state['frustration_count'] = frustration_count
+    # Define possible intents including coupon_query
+    possible_intents = "'order_status', 'knowledge_base_query', 'product_availability', 'coupon_query', 'greeting', 'refund_request', 'other'"
     
-    # Also include frustration_count in the return value
-    # This ensures it's properly passed to the next node
-    
-    # Check for coupon-related queries with a simple regex pattern
-    coupon_patterns = [
-        r'coupon', r'discount', r'promo code', r'promotion', r'offer', r'deal'
-    ]
-    
-    # Check if any coupon-related pattern is in the message
-    if any(re.search(pattern, user_message.lower()) for pattern in coupon_patterns):
-        print("--- Detected coupon-related query ---")
-        return {"intent": "coupon_query"}
-        
-    # Check for product-related queries with simple regex patterns
-    product_patterns = [
-        r'product', r'item', r'merchandise', r'goods', r'stock', r'inventory',
-        r'do you (have|sell|offer)', r'what (products|items)', r'looking for',
-        r'shirt', r'clothing', r'electronics', r'available'
-    ]
-    
-    # Check if any product-related pattern is in the message
-    if any(re.search(pattern, user_message.lower()) for pattern in product_patterns):
-        print("--- Detected product-related query ---")
-        return {"intent": "product_availability"}
-    
-    # Check if the message is just a number (likely an order number)
-    if re.match(r'^\d+$', user_message.strip()):
-        print(f"--- Detected numeric input '{user_message}', treating as order number ---")
-        # For simple numeric inputs, directly set the order number in the state
-        order_number = user_message.strip()
-        return {"intent": "order_status", "extracted_order_number": order_number}
-        
-    # Simple prompt for classification
-    prompt = f"""Based on the following user message and conversation history, classify the primary intent. Choose ONE from: 'order_status', 'knowledge_base_query', 'product_availability', 'greeting', 'other'.
-
+    # Create a comprehensive prompt for the LLM to classify intent and detect frustration
+    prompt = f"""Analyze the following user message in the context of the conversation history.
     Conversation History:
-    {[f'{m.type}: {m.content}' for m in messages]}
+    {history_str}
+    
+    User Message: "{user_message}"
+    
+    Tasks:
+    1. Classify the user's primary intent. Choose ONE from the following list: {possible_intents}.
+    2. Determine if the user is expressing significant frustration (e.g., anger, annoyance, dissatisfaction). Answer 'yes' or 'no'.
+    
+    Format your response as a JSON object with two fields: 'intent' and 'is_frustrated'.
+    Example: {{'intent': 'product_availability', 'is_frustrated': 'no'}}
+    """
 
-    User Message: {user_message}
-
-    Intent:"""
-
+    # Use the classifier LLM to analyze the message
     response = classifier_llm.invoke(prompt)
-    intent = response.content.strip().lower()
-
+    response_content = response.content.strip()
+    
+    try:
+        # Parse the JSON response
+        result = json.loads(response_content)
+        intent = result.get('intent', '').lower()
+        is_frustrated = result.get('is_frustrated', 'no').lower() == 'yes'
+    except json.JSONDecodeError:
+        # Fallback if response is not valid JSON
+        print(f"--- Failed to parse LLM response as JSON: {response_content} ---")
+        intent = 'knowledge_base_query'  # Default fallback
+        is_frustrated = False
+    
     # Basic validation/cleanup
-    allowed_intents = ['order_status', 'knowledge_base_query', 'product_availability', 'greeting', 'other']
+    allowed_intents = ['order_status', 'knowledge_base_query', 'product_availability', 'coupon_query', 'greeting', 'refund_request', 'other']
     if intent not in allowed_intents:
         print(f"--- Classified intent '{intent}' not in allowed list, defaulting to 'knowledge_base_query'. ---")
         intent = 'knowledge_base_query'
-
-    print(f"--- Classified Intent: {intent} ---")
     
-    # If the result is an error or fallback, increment frustration_count
-    if intent == 'other':
+    print(f"--- Classified Intent: {intent} ---")
+    print(f"--- Frustration Detected: {is_frustrated} ---")
+    
+    # Handle special cases using LLM for more accurate detection
+    if intent == 'refund_request':
+        print("--- Detected refund request, routing to manager approval ---")
+        # Use LLM to verify this is indeed a refund request that needs approval
+        verification_prompt = f"""Analyze this user message and determine if it's a refund request that requires manager approval.
+        
+        User Message: "{user_message}"
+        
+        Consider:
+        1. Is the user explicitly asking for a refund?
+        2. Are they describing a problem that would typically result in a refund?
+        3. Is the request complex or outside standard policy?
+        
+        Answer with only 'yes' if manager approval is needed, or 'no' if this can be handled by automated systems.
+        """
+        
+        verification_response = classifier_llm.invoke(verification_prompt)
+        needs_approval = verification_response.content.strip().lower() == 'yes'
+        
+        if needs_approval:
+            return {"intent": "manager_approval"}
+        else:
+            # If it's a simpler refund request that doesn't need approval
+            print("--- Refund request can be handled automatically ---")
+            return {"intent": "knowledge_base_query"}
+    
+    # Track frustration count
+    frustration_count = state.get('frustration_count', 0)
+    if is_frustrated or intent == 'other':
         frustration_count += 1
         state['frustration_count'] = frustration_count
-        print(f"--- Incremented frustration for 'other' intent. New count: {frustration_count} ---")
+        print(f"--- Incremented frustration. New count: {frustration_count} ---")
     
     return {"intent": intent, "frustration_count": frustration_count}
+
 
 def order_status_node(state: ConversationState):
     """Handles order status queries and provides status information for orders 1-5."""
@@ -125,151 +249,195 @@ def order_status_node(state: ConversationState):
     user_message = state['user_message']
     messages = state['messages']
     language = state.get('language', 'en')  # Get language from state
-    
-    # Check if order number was already extracted in the classify_intent_node
+
+    # Check if order number was already extracted in the entity extraction node
     extracted_order_number = state.get('extracted_order_number')
-    if extracted_order_number:
-        print(f"--- Using pre-extracted order number: {extracted_order_number} ---")
+    if extracted_order_number and extracted_order_number != 'unknown':
+        print(f"--- Using extracted order number: {extracted_order_number} ---")
         return process_order_status(extracted_order_number, language)
-    
-    # Use LLM to extract order number from user message
-    # This is more flexible than regex and can handle a wider variety of user inputs
-    conversation_context = "\n".join([f"{m.type}: {m.content}" for m in messages[-3:] if hasattr(m, 'type') and hasattr(m, 'content')])
-    
-    # Check for simple numeric input first (most common case after being asked for order number)
-    if re.match(r'^\d+$', user_message.strip()):
-        order_number = user_message.strip()
-        print(f"--- Detected simple numeric input: {order_number} ---")
-        return process_order_status(order_number, language)
-    
-    # Construct prompt based on language
+    # If no order number was extracted, ask the user to provide one
     if language == 'ar':
-        extract_prompt = f"""استخرج رقم الطلب من رسالة المستخدم التالية. إذا كان هناك رقم طلب، أعد الرقم فقط. إذا لم يكن هناك رقم طلب، أعد 'none'.
-
-سياق المحادثة السابقة:
-{conversation_context}
-
-رسالة المستخدم: {user_message}
-
-رقم الطلب:"""
+        response = "يرجى تقديم رقم الطلب الخاص بك حتى أتمكن من التحقق من حالته."
     else:
-        extract_prompt = f"""Extract the order number from the following user message. If there is an order number, return only the number. If there is no order number, return 'none'.
+        response = "Please provide your order number so I can check its status."
 
-Previous conversation context:
-{conversation_context}
+    return {"action_result": {"order_status": {"found": False, "message": response}}}
 
-User message: {user_message}
 
-Order number:"""
-    
-    # Call LLM to extract order number
-    response = llm.invoke(extract_prompt)
-    extracted_text = response.content.strip().lower()
-    
-    # Process the extracted text
-    print(f"--- LLM extracted: '{extracted_text}' from message: '{user_message}' ---")
-    
-    # Check if the extracted text is a valid order number
-    if extracted_text == 'none' or not re.search(r'\d+', extracted_text):
-        order_number = None
-    else:
-        # Extract just the numeric part if there's any additional text
-        match = re.search(r'(\d+)', extracted_text)
-        if match:
-            order_number = match.group(1)
-        else:
-            order_number = None
-    
-    # Process the order status with the extracted order number
-    if order_number:
-        return process_order_status(order_number, language)
-    else:
-        # If no order number found, ask the user to provide one
-        if language == 'ar':
-            response = "يرجى تقديم رقم الطلب الخاص بك حتى أتمكن من التحقق من حالته."
-        else:
-            response = "Please provide your order number so I can check its status."
-        return {"action_result": {"order_status": {"found": False, "message": response}}}
-    
 def process_order_status(order_number, language):
     """Process order status for a given order number and language."""
-    # Define order statuses for orders 1-5
-    order_statuses = {
-        "1": {"status": "delivered", "description": "Your order has been delivered successfully.", 
-              "ar_description": "تم توصيل طلبك بنجاح."},
-        "2": {"status": "shipped", "description": "Your order has been shipped and is on its way to you.", 
-              "ar_description": "تم شحن طلبك وهو في الطريق إليك."},
-        "3": {"status": "processing", "description": "Your order is currently being processed in our warehouse.", 
-              "ar_description": "يتم تجهيز طلبك حاليًا في مستودعنا."},
-        "4": {"status": "payment_confirmed", "description": "Payment for your order has been confirmed and we're preparing your items.", 
-              "ar_description": "تم تأكيد الدفع لطلبك ونحن نقوم بتجهيز العناصر الخاصة بك."},
-        "5": {"status": "pending", "description": "Your order is pending confirmation. We'll update you soon.", 
-              "ar_description": "طلبك في انتظار التأكيد. سنقوم بتحديث حالته قريبًا."}
+    # Mock order status data - in a real app, this would query a database
+    orders = {
+        "1": {"status": "shipped", "estimated_delivery": "2023-04-15", "tracking_number": "TN12345678"},
+        "2": {"status": "processing", "estimated_ship_date": "2023-04-10"},
+        "3": {"status": "delivered", "delivery_date": "2023-04-01"},
+        "4": {"status": "cancelled", "cancel_reason": "customer request"},
+        "5": {"status": "pending", "payment_status": "awaiting payment"}
     }
     
-    # Check if order number is between 1-5
-    if order_number in order_statuses:
-        status_info = order_statuses[order_number]
-        if language == 'ar':
-            response = f"طلبك رقم {order_number} {status_info['ar_description']}"
+    # Check if the order exists
+    if order_number in orders:
+        order = orders[order_number]
+        status = order["status"]
+        
+        # Format the response based on the order status and language
+        if language == "ar":
+            # Arabic responses
+            if status == "shipped":
+                response = f"تم شحن طلبك رقم {order_number}. رقم التتبع الخاص بك هو {order['tracking_number']}. تاريخ التسليم المتوقع هو {order['estimated_delivery']}."
+            elif status == "processing":
+                response = f"طلبك رقم {order_number} قيد المعالجة. تاريخ الشحن المتوقع هو {order['estimated_ship_date']}."
+            elif status == "delivered":
+                response = f"تم تسليم طلبك رقم {order_number} في {order['delivery_date']}."
+            elif status == "cancelled":
+                response = f"تم إلغاء طلبك رقم {order_number}. السبب: {order['cancel_reason']}."
+            elif status == "pending":
+                response = f"طلبك رقم {order_number} معلق. حالة الدفع: {order['payment_status']}."
+            else:
+                response = f"حالة طلبك رقم {order_number} هي: {status}."
         else:
-            response = f"Order #{order_number} is currently {status_info['status']}. {status_info['description']}"
+            # English responses (default)
+            if status == "shipped":
+                response = f"Your order #{order_number} has been shipped. Your tracking number is {order['tracking_number']}. Estimated delivery date is {order['estimated_delivery']}."
+            elif status == "processing":
+                response = f"Your order #{order_number} is being processed. Estimated ship date is {order['estimated_ship_date']}."
+            elif status == "delivered":
+                response = f"Your order #{order_number} was delivered on {order['delivery_date']}."
+            elif status == "cancelled":
+                response = f"Your order #{order_number} has been cancelled. Reason: {order['cancel_reason']}."
+            elif status == "pending":
+                response = f"Your order #{order_number} is pending. Payment status: {order['payment_status']}."
+            else:
+                response = f"The status of your order #{order_number} is: {status}."
         
-        # Create order info object for display
-        order_info = {
-            "order_id": order_number,
-            "status": status_info['status'],
-            "status_description": status_info['description'] if language == 'en' else status_info['ar_description'],
-            "estimated_delivery": "2025-05-01" if status_info['status'] in ['processing', 'payment_confirmed', 'shipped'] else None,
-            "tracking_number": f"TRK{order_number}12345" if status_info['status'] == 'shipped' else None
-        }
-        
-        return {"action_result": {"order_status": {"found": True, "message": response, "order_info": order_info}}}
+        return {"action_result": {"order_status": {"found": True, "status": status, "message": response}}}
     else:
-        # Order number not in range 1-5
-        if language == 'ar':
-            response = f"عذرًا، لا يمكنني العثور على معلومات حول الطلب رقم {order_number}. يرجى التأكد من رقم الطلب والمحاولة مرة أخرى."
+        # Order not found
+        if language == "ar":
+            response = f"عذراً، لم أتمكن من العثور على معلومات للطلب رقم {order_number}. يرجى التحقق من رقم الطلب والمحاولة مرة أخرى."
         else:
             response = f"Sorry, I couldn't find information for order #{order_number}. Please verify your order number and try again."
-        
+
         return {"action_result": {"order_status": {"found": False, "message": response}}}
 
+
 def action_node(state: ConversationState):
-    """Invokes the appropriate tool based on the classified intent."""
+    """Invokes the appropriate tool based on the classified intent and extracted entities."""
     print("--- Node: Action ---")
-    intent = state['intent']
     user_message = state['user_message']
-    messages = state['messages']
-    db = state.get('db')
-    language = state.get('language', 'en')  # Get language from state
+    intent = state.get('intent')
+    extracted_entity = state.get('extracted_entity')
+    entity_type = state.get('entity_type')
+    language = state.get('language', 'en')  # Default to English if not set
+    mild_frustration = state.get('mild_frustration', False)  # Check if user has mild frustration
+    
+    # First, extract necessary entities based on intent
+    entity_result = decide_tool_or_fetch_data_node(state)
+    extracted_entity = entity_result.get('extracted_entity')
+    entity_type = entity_result.get('entity_type')
+    
+    print(f"--- Extracted Entity: {extracted_entity} (Type: {entity_type}) ---")
     
     # Handle order status queries
     if intent == 'order_status':
+        # Update state with extracted order number if available
+        if entity_type == 'order_number' and extracted_entity != 'unknown':
+            state['extracted_order_number'] = extracted_entity
         return order_status_node(state)
-    
-    # Handle coupon queries
+
+    # Handle coupon queries with LLM-based entity extraction
     if intent == 'coupon_query':
         if db:
-            coupon_result = handle_coupon_query(user_message, db)
+            # Pass the extracted coupon code to the handle_coupon_query function
+            coupon_code = extracted_entity if entity_type == 'coupon_code' else None
+            coupon_result = handle_coupon_query(user_message, db, coupon_code)
             print(f"--- Coupon Query Result: {coupon_result} ---")
             return {"action_result": {"coupon_query": coupon_result}}
         else:
             print("--- No DB session available for coupon query ---")
             return {"action_result": {"coupon_query": {"error": "Database not available"}}}
-    
+
     # Regular tool handling for other intents
     tool_map = {tool.name: tool for tool in tools}
     tool_to_call = None
-    
-    if intent == 'knowledge_base_query':
-        # For other knowledge base queries, try the regular tool
-        tool_to_call = tool_map.get('knowledge_base_retriever')
-        input_value = user_message  # Use string input instead of state
+
+    if intent == 'knowledge_base_query' or intent == 'other':
+        print("--- Using RAG tool for knowledge base query ---")
+        # Use the RAG tool to search for relevant information
+        try:
+            from app.services.rag import search_knowledge_base
+            from app.db.session import get_db
+            db = next(get_db())
+            
+            # If there's mild frustration, use LLM to reformulate the query for better results
+            if mild_frustration:
+                print("--- Detected mild frustration, reformulating query for better results ---")
+                reformulation_prompt = f"""The user seems slightly frustrated with their query: "{user_message}"
+                
+                Please reformulate this into a clear, neutral search query that will help find the most relevant information.
+                Keep it concise and focused on the core information need.
+                
+                Reformulated query:
+                """
+                
+                reformulation_response = classifier_llm.invoke(reformulation_prompt)
+                reformulated_query = reformulation_response.content.strip()
+                print(f"--- Reformulated query: '{reformulated_query}' ---")
+                
+                # Search with both the original and reformulated queries for better coverage
+                results_original = search_knowledge_base(user_message, db, language=language)
+                results_reformulated = search_knowledge_base(reformulated_query, db, language=language)
+                
+                # Combine and deduplicate results
+                seen_ids = set()
+                combined_results = []
+                
+                # Process original results first (they might be more directly relevant)
+                for result in results_original:
+                    result_id = result.get("id")
+                    if result_id not in seen_ids:
+                        seen_ids.add(result_id)
+                        combined_results.append(result)
+                
+                # Then add unique reformulated results
+                for result in results_reformulated:
+                    result_id = result.get("id")
+                    if result_id not in seen_ids:
+                        seen_ids.add(result_id)
+                        combined_results.append(result)
+                
+                results = combined_results
+            else:
+                # Standard search without reformulation
+                results = search_knowledge_base(user_message, db, language=language)
+            
+            if results and len(results) > 0:
+                # Store the search results in the state
+                state['kb_results'] = results
+                print(f"--- Found {len(results)} relevant knowledge base entries ---")
+                
+                # Format the results for display
+                formatted_results = []
+                for result in results:
+                    formatted_results.append({
+                        "title": result.get("title", "Untitled"),
+                        "content": result.get("content", ""),
+                        "score": result.get("score", 0.0)
+                    })
+                    
+                state['kb_formatted_results'] = formatted_results
+            else:
+                print("--- No relevant knowledge base entries found ---")
+                state['kb_results'] = []
+                state['kb_formatted_results'] = []
+        except Exception as e:
+            print(f"--- Error searching knowledge base: {e} ---")
+            state['kb_results'] = []
+            state['kb_formatted_results'] = []
     elif intent == 'product_availability':
         tool_to_call = tool_map.get('product_availability_checker')
-        # For product availability, we need to pass both the message and the database session
-        # We'll handle this specially below
-        input_value = user_message  # Define input_value for this intent too
+        # For product availability, we'll use the extracted product name
+        input_value = extracted_entity if entity_type == 'product_name' else user_message
     else:
         input_value = user_message
 
@@ -280,130 +448,63 @@ def action_node(state: ConversationState):
             # For product availability, we need to handle the database session differently
             if intent == 'product_availability' and db:
                 print(f"--- Special handling for product availability with DB ---")
-                print(f"--- Looking for products in database with query: '{user_message}' ---")
+                print(f"--- Looking for products in database with query: '{input_value}' ---")
                 
-                # First, try to get all products if it's a general query
-                # English patterns
-                english_pattern = re.search(r'what (products|items|do you have|are your products)', user_message.lower())
-                # Arabic patterns - matching common ways to ask about products
-                # Simplified pattern to match any Arabic query about products
-                arabic_pattern = re.search(r'(ما هي|ما|اريد|أريد).*(المنتجات|منتجات|البضائع|بضائع|السلع)', user_message)
-                
-                # Debug prints
-                print(f"--- User message: '{user_message}' ---")
-                print(f"--- English pattern match: {english_pattern} ---")
-                print(f"--- Arabic pattern match: {arabic_pattern} ---")
-                
-                # Force Arabic pattern match for testing
-                if language == 'ar' and 'منتجات' in user_message:
-                    arabic_pattern = True
-                
-                if english_pattern or arabic_pattern:
-                    print("--- General product query detected, retrieving all products ---")
-                    from app.services.product import ProductService
-                    product_service = ProductService(db)
-                    products = product_service.get_products(limit=10)
-                    
-                    if products and len(products) > 0:
-                        print(f"--- Found {len(products)} products in database ---")
-                        # Format multiple products
-                        product_list = []
-                        for p in products:
-                            product_list.append({
-                                "id": p.id,
-                                "name": p.name,
-                                "price": p.price,
-                                "currency": p.currency,
-                                "stock": p.stock_quantity,
-                                "category": p.category,
-                                "description": p.description or ""
-                            })
-                        
-                        # Return all products found
-                        return {"action_result": {
-                            "product_availability": {
-                                "found": True,
-                                "multiple_products": True,
-                                "products": product_list,
-                                "message": f"Found {len(product_list)} products in our inventory."
-                            }
-                        }}
-                    
-                # If not a general query or no products found, try to extract specific product name
-                # English patterns
-                product_match = re.search(r'(?:do you have|is there|availability of|stock of|looking for)\s+([\w\s]+)(?:\?|$)', user_message.lower())
-                if not product_match:
-                    # Try a more general pattern
-                    product_match = re.search(r'([\w\s]+)(?:\s+in stock|\s+available|\?|$)', user_message.lower())
-                
-                # Arabic patterns for specific product queries
-                if not product_match:
-                    # Try to match Arabic patterns like "هل لديكم قميص قطني؟" or "أريد معلومات عن قميص قطني"
-                    arabic_product_match = re.search(r'(?:هل لديكم|هل عندكم|هل يوجد|أريد معلومات عن|اريد معلومات عن|معلومات عن)\s+([\w\s]+)(?:\?|$)', user_message)
-                    if arabic_product_match:
-                        product_match = arabic_product_match
-                    else:
-                        # Try even more general Arabic pattern
-                        arabic_product_match = re.search(r'(?:عن|حول|عندكم|لديكم)\s+([\w\s]+)', user_message)
-                        if arabic_product_match:
-                            product_match = arabic_product_match
-                
-                product_name = product_match.group(1).strip() if product_match else user_message
-                print(f"--- Extracted product name: '{product_name}' ---")
-                
+                # Use the extracted product name from LLM
+                product_name = input_value
+                if product_name == "general product query":
+                    # Handle general product queries differently if needed
+                    print("--- General product query detected ---")
+
                 # Use ProductSearchService directly
                 from app.services.product_search import ProductSearchService
                 product_search = ProductSearchService(db)
+                print(f"--- Searching for product: '{product_name}' ---")
                 found, product_info = product_search.search_product_by_name(product_name)
-                
+                print(f"--- Search result: found={found}, product_info={product_info} ---")
+
                 if found:
                     print(f"--- Found product in database: {product_info['name']} ---")
-                    product_data = {
-                        "found": True,
-                        "multiple_products": False,
-                        "product": {
-                            "product_name": product_info["name"],
-                            "availability": "In Stock" if product_info.get("stock_quantity", 0) > 0 else "Out of Stock",
-                            "stock": product_info.get("stock_quantity", 0),
-                            "price": product_info.get("price", 0),
-                            "currency": product_info.get("currency", "USD"),
-                            "description": product_info.get("description", ""),
-                            "category": product_info.get("category", "")
-                        },
-                        "message": f"Found product: {product_info['name']} - Price: {product_info.get('price', 0)} {product_info.get('currency', 'USD')}, Stock: {product_info.get('stock_quantity', 0)}"
-                    }
-                    
+                    product_data = {"found": True, "multiple_products": False,
+                                    "product": {"product_name": product_info["name"],
+                                                "availability": "In Stock" if product_info.get(
+                                                    "stock_quantity", 0) > 0 else "Out of Stock",
+                                                "stock": product_info.get("stock_quantity", 0),
+                                                "price": product_info.get("price", 0),
+                                                "currency": product_info.get("currency", "USD"),
+                                                "description": product_info.get("description", ""),
+                                                "category": product_info.get("category", "")},
+                                    "message": f"Found product: {product_info['name']} - Price: {product_info.get('price', 0)} {product_info.get('currency', 'USD')}, Stock: {product_info.get('stock_quantity', 0)}"}
+
                     # Return the action result directly
                     return {"action_result": {"product_availability": product_data}}
                 else:
                     print(f"--- No product found in database for: '{product_name}' ---")
                     # Create a standardized observation for no products found
-                    product_data = {
-                        "found": False,
-                        "message": f"I couldn't find any products matching '{product_name}' in our inventory."
-                    }
-                    
+                    product_data = {"found": False, "message": f"No, we don't sell {product_name}."}
+
                     # Return the action result directly
                     return {"action_result": {"product_availability": product_data}}
             else:
                 # Invoke the tool with the string input for other intents
                 observation = tool_to_call.invoke(input_value)
-            
+
             # Special handling for knowledge base retrieval
             if intent == 'knowledge_base_query' and isinstance(observation, str):
                 # For knowledge base retriever, we get back a string with the context
-                print(f"--- Tool Observation: Knowledge base context retrieved, length: {len(observation)} ---")
+                print(
+                    f"--- Tool Observation: Knowledge base context retrieved, length: {len(observation)} ---")
                 # Return both the action result and the retrieved context
                 return {
                     "retrieved_context": observation if observation != "No relevant information found in the knowledge base." else None,
-                    "action_result": {intent: {"found": observation != "No relevant information found in the knowledge base."}}
-                }
+                    "action_result": {intent: {
+                        "found": observation != "No relevant information found in the knowledge base."}}}
             else:
                 # For other tools, handle as before
                 # Ensure observation is serializable if it's complex
                 if not isinstance(observation, (str, dict, list, int, float, bool, type(None))):
                     observation = str(observation)
-                    
+
                 print(f"--- Tool Observation: {observation} ---")
                 return {"action_result": {intent: observation}}
 
@@ -416,6 +517,7 @@ def action_node(state: ConversationState):
         # No specific tool, maybe pass directly to response generation
         return {"action_result": None}
 
+
 def generate_response_node(state: ConversationState):
     """Generates the final response to the user."""
     print("--- Node: Generate Response ---")
@@ -425,7 +527,7 @@ def generate_response_node(state: ConversationState):
     context = state.get('retrieved_context')
     action_result = state.get('action_result')
     language = state.get('language', 'en')  # Default to English if not specified
-    
+
     # We won't use session_id in this function anymore
     # The history will be saved in the API endpoint
 
@@ -433,20 +535,102 @@ def generate_response_node(state: ConversationState):
     if intent == 'order_status' and action_result and 'order_status' in action_result:
         order_result = action_result['order_status']
         response_text = order_result['message']
-        
+
         # Add to history
-        updated_messages = messages + [HumanMessage(content=user_message_content), AIMessage(content=response_text)]
-        
+        updated_messages = messages + [HumanMessage(content=user_message_content),
+                                       AIMessage(content=response_text)]
+
         # If order was found, include order_info in the return value
         if order_result.get('found', False) and 'order_info' in order_result:
-            return {"response": response_text, "order_info": order_result['order_info'], "messages": updated_messages}
+            return {"response": response_text, "order_info": order_result['order_info'],
+                    "messages": updated_messages}
         else:
             return {"response": response_text, "messages": updated_messages}
+
+    # Special handling for coupon query results
+    if intent == 'coupon_query' and action_result and 'coupon_query' in action_result:
+        coupon_result = action_result['coupon_query']
+        query_type = coupon_result.get('query_type', 'general_query')
+        
+        # Handle specific coupon code queries
+        if query_type == 'specific_code':
+            if coupon_result.get('found', False) and 'coupon' in coupon_result:
+                coupon = coupon_result['coupon']
+                if language == 'ar':
+                    response_text = f"نعم، لدينا كوبون {coupon['code']}! يمنحك خصمًا بنسبة {coupon['discount']}%."
+                    if coupon.get('description'):
+                        response_text += f" {coupon['description']}"
+                    if coupon.get('expires_at'):
+                        response_text += f" هذا الكوبون صالح حتى {coupon['expires_at']}."
+                else:
+                    response_text = f"Yes, we have the coupon {coupon['code']}! It gives you a {coupon['discount']}% discount."
+                    if coupon.get('description'):
+                        response_text += f" {coupon['description']}"
+                    if coupon.get('expires_at'):
+                        response_text += f" This coupon is valid until {coupon['expires_at']}."
+            else:
+                # Coupon code not found
+                code = coupon_result.get('code', '')
+                if language == 'ar':
+                    response_text = f"عذرًا، الكوبون {code} غير صالح أو غير متوفر. الرجاء التحقق من الرمز والمحاولة مرة أخرى، أو اسأل عن الكوبونات المتاحة لدينا."
+                else:
+                    response_text = f"Sorry, the coupon {code} is invalid or unavailable. Please check the code and try again, or ask about our available coupons."
+        
+        # Handle list all coupons queries
+        elif query_type == 'list_all':
+            if coupon_result.get('found', False) and 'coupons' in coupon_result and len(coupon_result['coupons']) > 0:
+                coupons = coupon_result['coupons']
+                if language == 'ar':
+                    response_text = "هذه هي الكوبونات المتاحة حاليًا:\n\n"
+                else:
+                    response_text = "Here are our currently available coupons:\n\n"
+                
+                for i, coupon in enumerate(coupons, 1):
+                    if language == 'ar':
+                        response_text += f"{i}. {coupon['code']} - خصم {coupon['discount']}%"
+                        if coupon.get('description'):
+                            response_text += f" - {coupon['description']}"
+                        if coupon.get('expires_at'):
+                            response_text += f" (صالح حتى {coupon['expires_at']})"
+                    else:
+                        response_text += f"{i}. {coupon['code']} - {coupon['discount']}% discount"
+                        if coupon.get('description'):
+                            response_text += f" - {coupon['description']}"
+                        if coupon.get('expires_at'):
+                            response_text += f" (valid until {coupon['expires_at']})"
+                    response_text += "\n"
+            else:
+                # No coupons available
+                if language == 'ar':
+                    response_text = "عذرًا، ليس لدينا أي كوبونات متاحة حاليًا. يرجى التحقق مرة أخرى في وقت لاحق."
+                else:
+                    response_text = "Sorry, we don't have any coupons available at the moment. Please check back later."
+        
+        # Handle general coupon queries
+        else:  # general_query
+            has_coupons = coupon_result.get('has_coupons', False)
+            if has_coupons:
+                count = coupon_result.get('count', 0)
+                if language == 'ar':
+                    response_text = f"نعم، لدينا {count} كوبون(ات) متاحة حاليًا. هل ترغب في معرفة التفاصيل؟"
+                else:
+                    response_text = f"Yes, we have {count} coupon(s) available right now. Would you like to know the details?"
+            else:
+                if language == 'ar':
+                    response_text = "عذرًا، ليس لدينا أي كوبونات متاحة حاليًا. يرجى التحقق مرة أخرى في وقت لاحق."
+                else:
+                    response_text = "Sorry, we don't have any coupons available at the moment. Please check back later."
+        
+        # Add to history
+        updated_messages = messages + [HumanMessage(content=user_message_content),
+                                      AIMessage(content=response_text)]
+        
+        return {"response": response_text, "messages": updated_messages}
     
     # Special handling for product availability results
     if intent == 'product_availability' and action_result and 'product_availability' in action_result:
         product_result = action_result['product_availability']
-        
+
         # Check if we found multiple products
         if product_result.get('multiple_products', False) and 'products' in product_result:
             products = product_result['products']
@@ -454,7 +638,7 @@ def generate_response_node(state: ConversationState):
                 response_text = "لقد وجدت المنتجات التالية في مخزوننا:\n\n"
             else:
                 response_text = "I found the following products in our inventory:\n\n"
-                
+
             # Format product list
             for i, product in enumerate(products, 1):
                 if language == 'ar':
@@ -469,22 +653,23 @@ def generate_response_node(state: ConversationState):
                     if product['description']:
                         response_text += f" - {product['description']}"
                     response_text += "\n"
-            
+
             if language == 'ar':
                 response_text += "\nهل ترغب في معرفة المزيد عن أي من هذه المنتجات؟"
             else:
                 response_text += "\nWould you like to know more about any of these products?"
-                
+
             # Add to history - using messages from state
-            updated_messages = messages + [HumanMessage(content=user_message_content), AIMessage(content=response_text)]
+            updated_messages = messages + [HumanMessage(content=user_message_content),
+                                           AIMessage(content=response_text)]
             # Return the updated messages to be saved in the API endpoint
-            
+
             return {"response": response_text, "products": products, "messages": updated_messages}
-            
+
         # Check if we found a specific product
         elif product_result.get('found', False) and 'product' in product_result:
             product = product_result['product']
-            
+
             if language == 'ar':
                 if product.get('stock', 0) > 0:
                     response_text = f"نعم، لدينا {product['product_name']} في المخزون! يوجد حاليًا {product['stock']} وحدة متاحة بسعر {product['price']} {product.get('currency', 'USD')}."
@@ -495,33 +680,39 @@ def generate_response_node(state: ConversationState):
                     response_text = f"Yes, we have {product['product_name']} in stock! There are currently {product['stock']} units available at {product['price']} {product.get('currency', 'USD')}."
                 else:
                     response_text = f"I'm sorry, but {product['product_name']} is currently out of stock. Would you like me to notify you when it's back in stock?"
-            
+
             # Add description if available
             if product.get('description') and product['description'].strip():
                 if language == 'ar':
                     response_text += f"\n\nوصف المنتج: {product['description']}"
                 else:
                     response_text += f"\n\nProduct description: {product['description']}"
-            
+
             # Add to history - using messages from state
-            updated_messages = messages + [HumanMessage(content=user_message_content), AIMessage(content=response_text)]
+            updated_messages = messages + [HumanMessage(content=user_message_content),
+                                           AIMessage(content=response_text)]
             # Return the updated messages to be saved in the API endpoint
-            
+
             return {"response": response_text, "product": product, "messages": updated_messages}
-        
+
         # No products found
         elif not product_result.get('found', False):
-            if language == 'ar':
-                response_text = "عذرًا، لم أتمكن من العثور على أي منتجات تطابق طلبك. هل يمكنك تحديد ما تبحث عنه بشكل أكثر تفصيلاً؟"
+            # Use the message from the product_result if available
+            if 'message' in product_result:
+                response_text = product_result['message']
             else:
-                response_text = "I'm sorry, I couldn't find any products matching your request. Could you please specify what you're looking for in more detail?"
-            
+                if language == 'ar':
+                    response_text = "عذرًا، لا نبيع هذا المنتج."
+                else:
+                    response_text = "No, we don't sell this product."
+
             # Add to history - using messages from state
-            updated_messages = messages + [HumanMessage(content=user_message_content), AIMessage(content=response_text)]
+            updated_messages = messages + [HumanMessage(content=user_message_content),
+                                           AIMessage(content=response_text)]
             # Return the updated messages to be saved in the API endpoint
-            
+
             return {"response": response_text, "messages": updated_messages}
-    
+
     # Regular handling for other intents
     # Prepare prompt for LLM
     prompt_context = ""
@@ -564,47 +755,184 @@ def generate_response_node(state: ConversationState):
 
     return {"messages": updated_messages}
 
-def handle_coupon_query(user_message: str, db: Session):
-    """Handles coupon-related queries by checking for specific coupon codes or listing all active coupons."""
+
+def decide_tool_or_fetch_data_node(state: ConversationState):
+    """Uses LLM to extract necessary entities based on the classified intent."""
+    print("--- Node: Decide Tool or Fetch Data ---")
+    user_message = state['user_message']
+    intent = state['intent']
+    messages = state['messages']
+    language = state.get('language', 'en')  # Get language from state
+    frustration_count = state.get('frustration_count', 0)
+    
+    # Create a base state dictionary with all required fields
+    result_state = {
+        'user_message': user_message,
+        'intent': intent,
+        'messages': messages,
+        'language': language,
+        'frustration_count': frustration_count
+    }
+    
+    # Different entity extraction based on intent
+    if intent == 'product_availability':
+        # Extract product name from user message
+        prompt = f"""Extract the product name from the following user message. 
+        The user is asking about product availability.
+        
+        User message: "{user_message}"
+        
+        Return ONLY the product name as a simple string, without any additional text, quotes, or formatting.
+        If no specific product is mentioned, return "general product query".
+        """
+        
+        response = classifier_llm.invoke(prompt)
+        product_name = response.content.strip()
+        print(f"--- Extracted product name: '{product_name}' ---")
+        
+        # Add the extracted entity to the state
+        result_state['extracted_entity'] = product_name
+        result_state['entity_type'] = "product_name"
+        return result_state
+        
+    elif intent == 'order_status':
+        # Extract order number from user message
+        prompt = f"""Extract the order number from the following user message.
+        The user is asking about order status.
+        
+        User message: "{user_message}"
+        
+        Return ONLY the order number as a simple string, without any additional text or formatting.
+        If the message contains just a number, that's likely the order number.
+        If no order number is mentioned, return "unknown".
+        """
+        
+        response = classifier_llm.invoke(prompt)
+        order_number = response.content.strip()
+        
+        # If the response is just a number, use it directly
+        if order_number.isdigit():
+            print(f"--- Extracted order number: '{order_number}' ---")
+            result_state['extracted_entity'] = order_number
+            result_state['entity_type'] = "order_number"
+            result_state['extracted_order_number'] = order_number
+        else:
+            # Check if the user message itself is just a number
+            if user_message.strip().isdigit():
+                order_number = user_message.strip()
+                print(f"--- Using user message as order number: '{order_number}' ---")
+                result_state['extracted_entity'] = order_number
+                result_state['entity_type'] = "order_number"
+                result_state['extracted_order_number'] = order_number
+            else:
+                print("--- Could not extract order number ---")
+                result_state['extracted_entity'] = "unknown"
+                result_state['entity_type'] = "order_number"
+        
+        return result_state
+                
+    elif intent == 'coupon_query':
+        # Extract coupon code from user message with improved guidance
+        prompt = f"""Extract the coupon code from the following user message, if one exists.
+        The user is asking about a coupon or discount.
+        
+        User message: "{user_message}"
+        
+        Guidelines for extraction:
+        1. A coupon code is typically a specific promotional code like SUMMER20, DISCOUNT50, etc.
+        2. Common English words (like CAN, GET, HAVE, etc.) are NOT coupon codes.
+        3. If the user is asking about what coupons are available or what discounts they can get, there is NO specific coupon code.
+        4. Only extract a code if the user is explicitly referring to a specific coupon code.
+        
+        Your response should be ONE of these options:
+        - If a specific coupon code is mentioned, return ONLY that code in uppercase
+        - If the user is asking about available coupons or what coupons they can get, return "LIST_ALL"
+        - If the user is asking a general question about coupons without mentioning a specific code, return "GENERAL_COUPON_QUERY"
+        
+        Examples:
+        - "Do you have a SUMMER20 coupon?" → "SUMMER20"
+        - "What coupons do you have?" → "LIST_ALL"
+        - "Can I get a discount?" → "GENERAL_COUPON_QUERY"
+        - "What coupon can I get from you?" → "LIST_ALL"
+        """
+        
+        response = classifier_llm.invoke(prompt)
+        coupon_code = response.content.strip().upper()
+        print(f"--- Extracted coupon code or query type: '{coupon_code}' ---")
+        
+        # Additional validation to prevent common words from being treated as coupon codes
+        common_words = ["CAN", "GET", "HAVE", "THE", "FOR", "YOU", "ARE", "ANY", "WHAT", "HOW"]
+        if coupon_code in common_words:
+            print(f"--- '{coupon_code}' is a common word, treating as general query ---")
+            coupon_code = "GENERAL_COUPON_QUERY"
+        
+        result_state['extracted_entity'] = coupon_code
+        result_state['entity_type'] = "coupon_code"
+        return result_state
+    
+    # Default case for other intents
+    result_state['extracted_entity'] = None
+    result_state['entity_type'] = None
+    return result_state
+
+
+def handle_coupon_query(user_message: str, db: Session, coupon_code=None):
+    """Handles coupon-related queries by checking for specific coupon codes or listing all active coupons.
+    Now supports LLM-based entity extraction through the coupon_code parameter."""
     # Initialize the coupon service
     coupon_service = CouponService(db)
+    language = 'en'  # Default to English, could be extracted from state if needed
     
-    # Check if the user is asking for a specific coupon code
-    code_match = re.search(r'coupon\s+(?:code\s+)?([A-Za-z0-9]+)', user_message, re.IGNORECASE)
+    print(f"--- Handling coupon query with extracted code: '{coupon_code}' ---")
     
-    if code_match:
+    # If a specific coupon code was extracted by the LLM
+    if coupon_code and coupon_code not in ["LIST_ALL", "GENERAL_COUPON_QUERY"]:
         # User is asking about a specific coupon code
-        code = code_match.group(1).upper()
-        coupon = coupon_service.get_coupon_by_code(code)
-        
+        coupon = coupon_service.get_coupon_by_code(coupon_code)
+
         if coupon:
             # Format the coupon for response
-            formatted_coupon = {
-                "code": coupon.code,
-                "discount": coupon.discount,
-                "description": coupon.description or "",
-                "expires_at": coupon.expires_at.isoformat() if coupon.expires_at else None,
-                "is_active": coupon.is_active
-            }
-            
-            return {"coupon": formatted_coupon, "message": coupon_service.format_coupon_for_display(coupon)}
+            formatted_coupon = {"code": coupon.code, "discount": coupon.discount,
+                                "description": coupon.description or "",
+                                "expires_at": coupon.expires_at.isoformat() if coupon.expires_at else None,
+                                "is_active": coupon.is_active}
+
+            return {"coupon": formatted_coupon,
+                    "message": coupon_service.format_coupon_for_display(coupon),
+                    "query_type": "specific_code",
+                    "found": True}
         else:
-            return {"error": f"No coupon found with code '{code}'"}
+            # No valid coupon found with this code
+            return {"error": f"No coupon found with code '{coupon_code}'",
+                    "query_type": "specific_code",
+                    "found": False,
+                    "code": coupon_code}
     
-    # User is asking for available coupons
-    active_coupons = coupon_service.get_active_coupons()
-    formatted_coupons = []
+    # User is asking for a list of available coupons
+    elif coupon_code == "LIST_ALL":
+        active_coupons = coupon_service.get_active_coupons()
+        formatted_coupons = []
+
+        for coupon in active_coupons:
+            formatted_coupons.append({"code": coupon.code, "discount": coupon.discount,
+                                      "description": coupon.description or "",
+                                      "expires_at": coupon.expires_at.isoformat() if coupon.expires_at else None,
+                                      "is_active": coupon.is_active})
+
+        return {"coupons": formatted_coupons,
+                "message": coupon_service.format_coupons_list(active_coupons),
+                "query_type": "list_all",
+                "found": len(formatted_coupons) > 0,
+                "count": len(formatted_coupons)}
     
-    for coupon in active_coupons:
-        formatted_coupons.append({
-            "code": coupon.code,
-            "discount": coupon.discount,
-            "description": coupon.description or "",
-            "expires_at": coupon.expires_at.isoformat() if coupon.expires_at else None,
-            "is_active": coupon.is_active
-        })
-    
-    return {
-        "coupons": formatted_coupons,
-        "message": coupon_service.format_coupons_list(active_coupons)
-    }
+    # User is asking a general question about coupons
+    else:  # GENERAL_COUPON_QUERY or None
+        active_coupons = coupon_service.get_active_coupons()
+        has_coupons = len(active_coupons) > 0
+        
+        # For general queries, we'll return information about whether we have coupons
+        # but not necessarily list all of them
+        return {"has_coupons": has_coupons,
+                "count": len(active_coupons),
+                "query_type": "general_query",
+                "found": has_coupons}

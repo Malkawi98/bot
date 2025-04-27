@@ -323,15 +323,41 @@ def search_embedding(embedding: list[float], top_k: int = 5,
     # Load collection into memory
     col = load_collection(collection_name)
     
+    # Get the schema fields to determine what fields are available
+    schema_fields = [field.name for field in col.schema.fields]
+    print(f"Available schema fields: {schema_fields}")
+    
+    # Check embedding dimensions
+    embedding_field = next((field for field in col.schema.fields if field.name == "embedding"), None)
+    if embedding_field:
+        expected_dim = embedding_field.params.get("dim", EMBEDDING_DIM)
+        actual_dim = len(embedding)
+        if expected_dim != actual_dim:
+            print(f"Vector dimension mismatch: expected {expected_dim}, got {actual_dim}")
+            # Adjust embedding to match expected dimensions
+            if actual_dim > expected_dim:
+                # Truncate the embedding
+                embedding = embedding[:expected_dim]
+                print(f"Truncated embedding to {expected_dim} dimensions")
+            else:
+                # Pad the embedding with zeros
+                embedding = embedding + [0.0] * (expected_dim - actual_dim)
+                print(f"Padded embedding to {expected_dim} dimensions")
+    
+    # Determine which output fields to use based on what's available in the schema
+    output_fields = ["text"]
+    if "language" in schema_fields:
+        output_fields.append("language")
+    
     # Perform search
     try:
-        print(f"Searching in collection {collection_name} with top_k={top_k}")
+        print(f"Searching in collection {collection_name} with top_k={top_k}, output_fields={output_fields}")
         results = col.search(
             data=[embedding], 
             anns_field="embedding",
             param={"metric_type": "L2", "params": {"nprobe": 10}}, 
             limit=top_k,
-            output_fields=["text", "language"], 
+            output_fields=output_fields, 
         )
         print(f"Search results: {results}")
         
@@ -358,13 +384,17 @@ def search_embedding(embedding: list[float], top_k: int = 5,
                     try:
                         if hasattr(hit, 'entity') and isinstance(hit.entity, dict):
                             text = hit.entity.get('text', '')
-                            language = hit.entity.get('language', 'en')
+                            # Handle case where language field might not exist in the schema
+                            language = hit.entity.get('language', 'en') if 'language' in schema_fields else 'en'
                             if text:
-                                simplified_results.append({
+                                result_dict = {
                                     'text': text,
-                                    'language': language,
                                     'score': hit.distance if hasattr(hit, 'distance') else 0.0
-                                })
+                                }
+                                # Only add language if it exists in the schema
+                                if 'language' in schema_fields:
+                                    result_dict['language'] = language
+                                simplified_results.append(result_dict)
                                 print(f"Added text with score {hit.distance if hasattr(hit, 'distance') else 0.0}: {text[:50]}...")
                     except Exception as inner_e:
                         print(f"Error processing hit: {inner_e}")

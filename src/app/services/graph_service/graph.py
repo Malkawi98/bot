@@ -1,13 +1,14 @@
 from langgraph.graph import StateGraph, END
 from .state import ConversationState
-from .nodes import classify_intent_node, action_node, generate_response_node, frustration_node, manager_approval_node
-from .edges import route_based_on_intent, route_after_action
+from .nodes import classify_intent_node, action_node, generate_response_node, frustration_node, manager_approval_node, decide_tool_or_fetch_data_node
+from .edges import route_based_on_intent, route_after_action, route_after_entity_extraction
 
 # Create the graph
 workflow = StateGraph(ConversationState)
 
 # Add nodes
 workflow.add_node("classify_intent", classify_intent_node)
+workflow.add_node("decide_tool_or_fetch_data_node", decide_tool_or_fetch_data_node)
 workflow.add_node("action_node", action_node)
 workflow.add_node("generate_response", generate_response_node)
 workflow.add_node("frustration_node", frustration_node)
@@ -22,9 +23,19 @@ workflow.add_conditional_edges(
     route_based_on_intent,
     {
         "action_node": "action_node",
+        "decide_tool_or_fetch_data_node": "decide_tool_or_fetch_data_node",
         "generate_response_node": "generate_response",
         "frustration_node": "frustration_node",
         "manager_approval_node": "manager_approval_node",
+    }
+)
+
+# Edge after entity extraction
+workflow.add_conditional_edges(
+    "decide_tool_or_fetch_data_node",
+    route_after_entity_extraction,
+    {
+        "action_node": "action_node"
     }
 )
 
